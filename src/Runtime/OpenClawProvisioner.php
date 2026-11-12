@@ -14,8 +14,13 @@ final class OpenClawProvisioner
     }
 
     /** @return array{external_agent_id:string, workspace:string} */
-    public function provision(string $agentPublicId): array
+    public function provision(string $agentPublicId, string $displayName, string $email, string $phone = '', string $countryCode = ''): array
     {
-        return (new EmbeddedAgentAdmin($this->config))->run('provision-openclaw', '--agent-public-id', $agentPublicId, '--workspace-root', $this->config->required('OPENCLAW_AGENT_WORKSPACE_ROOT'));
+        return (new EmbeddedAgentAdmin($this->config))->run(
+            'provision-openclaw', '--agent-public-id', $agentPublicId,
+            '--workspace-root', $this->config->required('OPENCLAW_AGENT_WORKSPACE_ROOT'),
+            '--display-name', $displayName, '--email', $email,
+            '--phone', $phone, '--country-code', $countryCode,
+        );
     }
 }

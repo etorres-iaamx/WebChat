@@ -29,6 +29,9 @@ Telegram y WhatsApp con sus identidades externas y pairing real.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
 - `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adapter Python embebido.
+- Al crear el agente, el adapter genera su `USER.md` con los datos verificados del
+  perfil WebChat (nombre, correo, teléfono, país e identificador público); nunca copia
+  contraseñas ni códigos de verificación.
 
 El provisioning de runtimes está integrado en WebChat: PHP orquesta un adapter Python
 versionado en `runtime/agent_admin.py`, dentro de este mismo repositorio, que delega en

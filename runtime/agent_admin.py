@@ -17,6 +17,11 @@ class AdapterError(RuntimeError):
     pass
 
 
+def profile_value(value: str) -> str:
+    """Keep user-entered profile values on one bounded Markdown line."""
+    return " ".join(value.replace("`", "' ").split())[:500]
+
+
 def run(command: list[str], *, stdin: str | None = None, timeout: float = 30.0) -> str:
     try:
         result = subprocess.run(command, input=stdin, capture_output=True, text=True,
@@ -73,6 +78,14 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
                         "--agent-dir", f"{root}/.agents/{agent_id}",
                         "--non-interactive", "--json"])
     external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
+    atomic_write(Path(workspace) / "USER.md", (
+        "# USER\n\n"
+        f"- Nombre: {profile_value(args.display_name)}\n"
+        f"- Correo: {profile_value(args.email)}\n"
+        f"- Teléfono: {profile_value(args.phone) or 'No proporcionado'}\n"
+        f"- País/código: {profile_value(args.country_code) or 'No proporcionado'}\n"
+        f"- Identificador WebChat: {profile_value(args.agent_public_id)}\n"
+    ))
     return {"external_agent_id": str(external), "workspace": workspace}
 
 
@@ -109,6 +122,10 @@ def main() -> int:
     create = sub.add_parser("provision-openclaw")
     create.add_argument("--agent-public-id", required=True)
     create.add_argument("--workspace-root", required=True)
+    create.add_argument("--display-name", required=True)
+    create.add_argument("--email", required=True)
+    create.add_argument("--phone", default="")
+    create.add_argument("--country-code", default="")
     bind = sub.add_parser("bind-peer")
     bind.add_argument("--agent-id", required=True)
     bind.add_argument("--channel", choices=("telegram", "whatsapp"), required=True)

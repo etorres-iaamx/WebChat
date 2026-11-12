@@ -122,7 +122,7 @@ final class AuthService
 
     private function provisionAgent(int $userId): void
     {
-        $statement = $this->database->pdo()->prepare('SELECT la.id, la.public_id FROM logical_agents la WHERE la.user_id = :user_id LIMIT 1');
+        $statement = $this->database->pdo()->prepare('SELECT la.id, la.public_id, u.display_name, u.email, u.phone, u.country_code FROM logical_agents la INNER JOIN users u ON u.id = la.user_id WHERE la.user_id = :user_id LIMIT 1');
         $statement->execute(['user_id' => $userId]);
         $agent = $statement->fetch();
         if (!is_array($agent)) return;
@@ -130,7 +130,10 @@ final class AuthService
         $binding->execute(['agent_id' => $agent['id']]);
         $existing = $binding->fetch();
         if (is_array($existing) && $existing['external_agent_id']) return;
-        $resource = (new OpenClawProvisioner($this->config))->provision((string) $agent['public_id']);
+        $resource = (new OpenClawProvisioner($this->config))->provision(
+            (string) $agent['public_id'], (string) $agent['display_name'], (string) $agent['email'],
+            (string) ($agent['phone'] ?? ''), (string) ($agent['country_code'] ?? ''),
+        );
         $this->database->pdo()->prepare('INSERT INTO runtime_bindings (logical_agent_id, runtime, external_agent_id, workspace_ref, status) VALUES (:agent_id, \'openclaw\', :external_id, :workspace, \'active\') ON DUPLICATE KEY UPDATE external_agent_id = VALUES(external_agent_id), workspace_ref = VALUES(workspace_ref), status = \'active\'')
             ->execute(['agent_id' => $agent['id'], 'external_id' => $resource['external_agent_id'], 'workspace' => $resource['workspace']]);
         $this->database->pdo()->prepare('UPDATE logical_agents SET status = \'active\' WHERE id = :id')->execute(['id' => $agent['id']]);
