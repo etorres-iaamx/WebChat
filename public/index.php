@@ -39,7 +39,29 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
       </form>
       <form data-form="register" hidden>
         <label>Nombre<input name="name" autocomplete="name" required></label>
-        <label>País / código telefónico<input name="country_code" placeholder="MX" required></label>
+        <label>País / código telefónico
+          <select name="country_code" autocomplete="country" required>
+            <option value="" selected disabled>Selecciona un código</option>
+            <option value="+52">México (+52)</option>
+            <option value="+1">Estados Unidos / Canadá (+1)</option>
+            <option value="+54">Argentina (+54)</option>
+            <option value="+55">Brasil (+55)</option>
+            <option value="+56">Chile (+56)</option>
+            <option value="+57">Colombia (+57)</option>
+            <option value="+506">Costa Rica (+506)</option>
+            <option value="+34">España (+34)</option>
+            <option value="+33">Francia (+33)</option>
+            <option value="+49">Alemania (+49)</option>
+            <option value="+39">Italia (+39)</option>
+            <option value="+44">Reino Unido (+44)</option>
+            <option value="+51">Perú (+51)</option>
+            <option value="+58">Venezuela (+58)</option>
+            <option value="+91">India (+91)</option>
+            <option value="+81">Japón (+81)</option>
+            <option value="+86">China (+86)</option>
+            <option value="+61">Australia (+61)</option>
+          </select>
+        </label>
         <label>Teléfono<input name="phone" type="tel" autocomplete="tel" required></label>
         <label>Correo<input name="email" type="email" autocomplete="email" required></label>
         <label>Contraseña<input name="password" type="password" minlength="10" autocomplete="new-password" required></label>
