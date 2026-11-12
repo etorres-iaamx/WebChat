@@ -8,10 +8,12 @@ use RuntimeException;
 use Webchat\App\Database;
 use Webchat\App\Token;
 use Webchat\App\Uuid;
+use Webchat\App\Config;
+use Webchat\Runtime\OpenClawBindingManager;
 
 final class ChannelIdentityService
 {
-    public function __construct(private readonly Database $database)
+    public function __construct(private readonly Database $database, private readonly Config $config)
     {
     }
 
@@ -40,12 +42,25 @@ final class ChannelIdentityService
 
     public function confirmPairing(int $userId, string $pairingId, string $challenge): void
     {
-        $statement = $this->database->pdo()->prepare('SELECT * FROM pairing_attempts WHERE public_id = :public_id AND user_id = :user_id AND status = \'pending\' AND expires_at > UTC_TIMESTAMP(6) LIMIT 1');
+        $statement = $this->database->pdo()->prepare('SELECT * FROM pairing_attempts WHERE public_id = :public_id AND user_id = :user_id AND status IN (\'pending\', \'binding_pending\') AND expires_at > UTC_TIMESTAMP(6) LIMIT 1');
         $statement->execute(['public_id' => $pairingId, 'user_id' => $userId]);
         $attempt = $statement->fetch();
         if (!is_array($attempt) || !hash_equals((string) $attempt['challenge_hash'], Token::hash(trim($challenge)))) throw new RuntimeException('El código de pairing no es válido.');
+        $agent = $this->database->pdo()->prepare('SELECT rb.external_agent_id FROM logical_agents la INNER JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = \'openclaw\' WHERE la.user_id = :user_id LIMIT 1');
+        $agent->execute(['user_id' => $userId]);
+        $agentId = $agent->fetchColumn();
+        if (!is_string($agentId) || $agentId === '') throw new RuntimeException('El agente OpenClaw todavía no está provisionado.');
         $this->database->transaction(function ($pdo) use ($attempt, $userId): void {
-            $pdo->prepare('INSERT INTO channel_identities (user_id, channel, external_identity, status) VALUES (:user_id, :channel, :identity, \'paired\') ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), status = \'paired\'')->execute(['user_id' => $userId, 'channel' => $attempt['channel'], 'identity' => $attempt['external_identity']]);
+            $pdo->prepare('INSERT INTO channel_identities (user_id, channel, external_identity, status) VALUES (:user_id, :channel, :identity, \'binding_pending\') ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), status = \'binding_pending\'')->execute(['user_id' => $userId, 'channel' => $attempt['channel'], 'identity' => $attempt['external_identity']]);
+            $pdo->prepare('UPDATE pairing_attempts SET status = \'binding_pending\' WHERE id = :id')->execute(['id' => $attempt['id']]);
+        });
+        try {
+            (new OpenClawBindingManager($this->config))->bindPeer($agentId, (string) $attempt['channel'], (string) $attempt['external_identity']);
+        } catch (\Throwable $error) {
+            throw new RuntimeException('No fue posible completar el binding del canal en OpenClaw.', 0, $error);
+        }
+        $this->database->transaction(function ($pdo) use ($attempt): void {
+            $pdo->prepare('UPDATE channel_identities SET status = \'paired\' WHERE channel = :channel AND external_identity = :identity')->execute(['channel' => $attempt['channel'], 'identity' => $attempt['external_identity']]);
             $pdo->prepare('UPDATE pairing_attempts SET status = \'confirmed\', confirmed_at = UTC_TIMESTAMP(6) WHERE id = :id')->execute(['id' => $attempt['id']]);
         });
     }

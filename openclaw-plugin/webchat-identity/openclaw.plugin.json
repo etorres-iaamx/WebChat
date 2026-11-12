@@ -1,0 +1,16 @@
+{
+  "id": "webchat-identity",
+  "categories": ["gateway"],
+  "activation": {"onStartup": true},
+  "name": "WebChat identity routing",
+  "kind": "feature",
+  "description": "Claims unregistered Telegram and WhatsApp messages and sends the WebChat registration link.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "resolveUrl": {"type": "string", "format": "uri"},
+      "timeoutMs": {"type": "integer", "minimum": 250, "maximum": 10000}
+    }
+  }
+}
