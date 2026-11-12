@@ -28,13 +28,14 @@ Telegram y WhatsApp con sus identidades externas y pairing real.
 - `pairing_attempts` guarda desafíos temporales y `channel_identities` guarda el vínculo confirmado.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
-- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adaptador local.
+- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adapter Python embebido.
 
-El provisioning de runtimes está integrado en WebChat mediante adaptadores locales que
-delegan en las CLIs oficiales. WebChat no depende de otro repositorio para administrar
-OpenClaw o Hermes. Solo persiste en `runtime_bindings` el resultado de cada operación.
-Para OpenClaw, el binding de Telegram/WhatsApp conserva la identidad externa como un
-peer directo.
+El provisioning de runtimes está integrado en WebChat: PHP orquesta un adapter Python
+versionado en `runtime/agent_admin.py`, dentro de este mismo repositorio, que delega en
+las CLIs oficiales. WebChat no depende de otro repositorio para administrar OpenClaw o
+Hermes. Solo persiste en `runtime_bindings` el resultado de cada operación. Para
+OpenClaw, el binding de Telegram/WhatsApp conserva la identidad externa como un peer
+directo.
 
 Para activar provisioning en un entorno de pruebas, define también un workspace permitido:
 
@@ -45,7 +46,7 @@ OPENCLAW_AGENT_WORKSPACE_ROOT=/var/lib/openclaw/workspaces
 
 Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_ENABLED=1`
 y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
-`memories/USER.md` y `AGENTS.md`) mediante el adaptador local.
+`memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-206 (dashboard con botón flotante) e IAADL-205 (panel de AI Assistant).
 
@@ -67,6 +68,7 @@ El navegador recibe únicamente un token firmado y de duración limitada para la
 ## Requisitos
 
 - PHP 8.3+ con `pdo_mysql` y soporte de streams.
+- Python 3.12+ para el adapter embebido de lifecycle.
 - MariaDB 10.6+.
 - OpenClaw Gateway local accesible por WebSocket.
 - Caddy y ngrok para publicar HTTP y WebSocket en el mismo dominio.

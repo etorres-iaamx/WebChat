@@ -17,7 +17,7 @@ final class HermesProvisioner
     {
         $profile = trim((string) $this->config->get('HERMES_PROFILE_PREFIX', 'webchat-')) . strtolower(str_replace('-', '', $userPublicId));
         $description = 'WebChat: ' . $displayName;
-        $workspace = (new LocalHermesAdmin($this->config))->provision($profile, $description, '# SOUL\n\nPerfil WebChat de ' . $displayName . ".\n", "# USER\n\nNombre: {$displayName}\nCorreo: {$email}\n", "# AGENTS\n\nEste perfil solo opera sobre su propia conversación de WebChat.\n");
+        $workspace = (new EmbeddedAgentAdmin($this->config))->run('provision-hermes', '--profile', $profile, '--description', $description, '--home', $this->config->required('HERMES_HOME'), '--display-name', $displayName, '--email', $email)['workspace'];
         return ['external_agent_id' => $profile, 'workspace' => $workspace];
     }
 }

@@ -35,6 +35,8 @@ final class Config
             'HERMES_PROVISIONING_ENABLED' => '0',
             'HERMES_HOME' => '',
             'HERMES_PROFILE_PREFIX' => 'webchat-',
+            'AGENT_ADMIN_PYTHON' => 'python3',
+            'AGENT_ADMIN_SCRIPT' => '',
             'WEBCHAT_BIND_HOST' => '127.0.0.1',
             'WEBCHAT_WS_PORT' => '8081',
             'WEBCHAT_PUBLIC_WS_URL' => '',

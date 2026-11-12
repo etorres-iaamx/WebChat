@@ -6,3 +6,5 @@
 .DS_Store
 vendor/
 coverage/
+__pycache__/
+*.pyc
