@@ -25,6 +25,10 @@ del WebChat. No se crea sesión ni se envía el mensaje al agente `main`.
 3. El canal confirma la identidad mediante `pairing/confirm`.
 4. La identidad se guarda con una restricción única por canal e identidad externa.
 
+La pantalla autenticada de WebChat permite iniciar y confirmar el pairing. El código se
+mantiene temporal y se usa una sola vez; la confirmación crea el binding por peer a
+través de `agent-admin`, nunca un binding global del canal.
+
 La integración específica con el Gateway se conectará cuando el canal real esté activo.
 La cuenta de WhatsApp del entorno actualmente aparece desconectada; no se debe marcar
 como operativa hasta completar `openclaw channels login --channel whatsapp`.

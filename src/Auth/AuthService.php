@@ -105,13 +105,19 @@ final class AuthService
             $agent = $this->ensureLogicalAgent($pdo, (int) $user['id'], (string) $user['display_name']);
             return ['user' => $this->findUserByIdWithPdo($pdo, (int) $user['id']) ?? $user, 'agent_created' => $agent];
         });
-        if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) {
-            $this->provisionAgent((int) $user['id']);
-        }
-        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) {
-            $this->provisionHermes((int) $user['id']);
-        }
+        $this->provisionRuntimes((int) $user['id']);
         return ['user' => $this->publicUser($result['user']), 'agent_created' => $result['agent_created']];
+    }
+
+    public function provisionRuntimesForUser(int $userId): void
+    {
+        $this->provisionRuntimes($userId);
+    }
+
+    private function provisionRuntimes(int $userId): void
+    {
+        if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) $this->provisionAgent($userId);
+        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) $this->provisionHermes($userId);
     }
 
     private function provisionAgent(int $userId): void

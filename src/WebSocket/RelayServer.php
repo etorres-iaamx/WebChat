@@ -19,6 +19,8 @@ final class RelayServer
     private const MAX_CLIENTS_PER_PROCESS = 64;
 
     private ?ChatRepository $repository = null;
+    /** @var array<string,string> */
+    private array $activeRunText = [];
 
     public function __construct(private readonly Config $config)
     {
@@ -122,10 +124,7 @@ final class RelayServer
         $gateway = new OpenClawClient($this->config);
         try {
             $gateway->connect();
-            $history = $repository->history((int) $session['conversation_id'], 50);
-            if ($history === []) {
-                $history = $this->normalizeGatewayHistory($gateway->history((string) $session['gateway_session_key'], 50));
-            }
+            $history = $this->normalizeGatewayHistory($gateway->history((string) $session['gateway_session_key'], 50));
 
             $browser->sendJson([
                 'type' => 'connected',
@@ -310,10 +309,10 @@ final class RelayServer
             } elseif ($replace) {
                 $text = $deltaText;
             } else {
-                $text = $repository->assistantContent((int) $run['id']) . $deltaText;
+                $text = ($this->activeRunText[$runId] ?? '') . $deltaText;
                 $replace = true;
             }
-            $repository->updateAssistantMessage((int) $run['id'], $text, 'streaming');
+            $this->activeRunText[$runId] = $text;
             $browser->sendJson([
                 'type' => 'message.delta',
                 'run_id' => $runId,
@@ -326,9 +325,9 @@ final class RelayServer
         if ($state === 'final') {
             $text = $this->extractText($payload['message'] ?? '');
             if ($text === '') {
-                $text = $repository->assistantContent((int) $run['id']);
+                $text = $this->activeRunText[$runId] ?? '';
             }
-            $repository->updateAssistantMessage((int) $run['id'], $text, 'completed');
+            $this->activeRunText[$runId] = $text;
             $repository->finishRun((int) $run['id'], 'completed');
             $browser->sendJson([
                 'type' => 'message.final',
@@ -341,7 +340,7 @@ final class RelayServer
         }
         if (in_array($state, ['error', 'aborted'], true)) {
             $errorMessage = is_string($payload['errorMessage'] ?? null) ? $payload['errorMessage'] : 'La respuesta fue interrumpida.';
-            $repository->updateAssistantMessage((int) $run['id'], $errorMessage, 'failed');
+            $this->activeRunText[$runId] = $errorMessage;
             $repository->finishRun((int) $run['id'], $state, strtoupper($state), $errorMessage);
             $this->sendError($browser, 'AGENT_' . strtoupper($state), $errorMessage, null, true, $runId);
             $browser->sendJson(['type' => 'typing', 'on' => false, 'run_id' => $runId]);

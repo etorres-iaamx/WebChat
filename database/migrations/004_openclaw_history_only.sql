@@ -1,0 +1,21 @@
+CREATE TABLE relay_requests (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) NOT NULL,
+    conversation_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    client_request_id VARCHAR(80) NOT NULL,
+    openclaw_run_id VARCHAR(255) NULL,
+    assistant_public_id CHAR(36) NULL,
+    state VARCHAR(32) NOT NULL DEFAULT 'accepted',
+    error_code VARCHAR(80) NULL,
+    error_message VARCHAR(500) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_relay_requests_public_id (public_id),
+    UNIQUE KEY uq_relay_requests_request (conversation_id, client_request_id),
+    UNIQUE KEY uq_relay_requests_run (openclaw_run_id),
+    KEY idx_relay_requests_conversation_created (conversation_id, created_at),
+    CONSTRAINT fk_relay_requests_conversation FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_relay_requests_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

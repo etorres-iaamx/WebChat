@@ -32,7 +32,8 @@ try {
         $config->required('APP_SECRET'),
         $config->int('WEBCHAT_TOKEN_TTL', 3600),
     );
-    $history = webchat_repository()->history((int) $session['conversation_id'], 50);
+    // Conversation content is loaded by the relay from OpenClaw chat.history.
+    $history = [];
     $host = (string) ($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
     $webSocketUrl = $config->publicWebSocketUrl($host, $secureCookie);
 

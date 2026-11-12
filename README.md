@@ -28,7 +28,7 @@ Telegram y WhatsApp con sus identidades externas y pairing real.
 - `pairing_attempts` guarda desafíos temporales y `channel_identities` guarda el vínculo confirmado.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
-- `OPENCLAW_PROVISIONING_ENABLED=1` activa el comando controlado `openclaw agents add`.
+- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante `agent-admin`.
 
 El provisioning de runtimes se delega al repositorio `agent-admin`, que debe estar
 instalado en el host. Define `OPENCLAW_ADMIN_SCRIPT` y `HERMES_ADMIN_SCRIPT` con las
@@ -113,7 +113,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 FLUSH PRIVILEGES;
 ```
 
-La migración crea `users`, `conversations`, `conversation_participants`, `web_sessions`, `messages`, `gateway_runs` y `schema_migrations`. Las claves foráneas mantienen separadas las entidades de identidad, sesión, conversación, mensajes y ejecuciones del Gateway.
+Las migraciones crean las entidades de identidad, sesión y correlación del relay. Desde
+`004_openclaw_history_only.sql`, el contenido de conversación no se guarda en MariaDB:
+el historial se obtiene exclusivamente con `chat.history` de OpenClaw; `relay_requests`
+solo conserva request IDs, run IDs y estados técnicos para idempotencia.
 
 ## OpenClaw Gateway
 

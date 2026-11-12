@@ -15,6 +15,21 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
       <p>Hola, <?= htmlspecialchars((string) $auth['name'], ENT_QUOTES, 'UTF-8') ?>. Tu agente está asociado a tu cuenta.</p>
       <a class="button" href="./webchat/index.php">Abrir WebChat</a>
       <button class="button button--secondary" data-action="logout">Cerrar sesión</button>
+      <section class="pairing-card" aria-labelledby="pairing-title">
+        <h2 id="pairing-title">Vincular un canal</h2>
+        <p>Genera un código para tu identidad de Telegram o WhatsApp y confírmalo después.</p>
+        <form data-form="pairing-start">
+          <label>Canal<select name="channel"><option value="telegram">Telegram</option><option value="whatsapp">WhatsApp</option></select></label>
+          <label>Identidad externa<input name="external_identity" placeholder="ID de Telegram o número de WhatsApp" required></label>
+          <button class="button" type="submit">Generar código</button>
+        </form>
+        <form data-form="pairing-confirm" hidden>
+          <input type="hidden" name="pairing_id">
+          <label>Código de pairing<input name="challenge" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
+          <button class="button" type="submit">Confirmar vinculación</button>
+        </form>
+        <p class="status" data-pairing-status role="status"></p>
+      </section>
     <?php else: ?>
       <div class="tabs"><button class="tab is-active" data-tab="login">Iniciar sesión</button><button class="tab" data-tab="register">Crear cuenta</button></div>
       <form data-form="login">

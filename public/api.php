@@ -55,6 +55,12 @@ try {
         $user = $auth->userFromSession(auth_token());
         json_response(['ok' => true, 'authenticated' => $user !== null, 'user' => $user]);
     }
+    if ($action === 'runtime/provision' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        $auth->provisionRuntimesForUser($userId);
+        json_response(['ok' => true]);
+    }
     if ($action === 'pairing/start' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = $auth->userIdFromSession(auth_token());
         if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);

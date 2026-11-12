@@ -134,30 +134,19 @@ final class ChatRepository
     /** @return list<array<string, mixed>> */
     public function history(int $conversationId, int $limit = 50): array
     {
-        $limit = max(1, min(100, $limit));
-        $statement = $this->database->pdo()->prepare("SELECT public_id, sender_type, content, status, created_at, updated_at FROM messages WHERE conversation_id = :conversation_id ORDER BY created_at DESC, id DESC LIMIT {$limit}");
-        $statement->execute(['conversation_id' => $conversationId]);
-        $rows = array_reverse($statement->fetchAll());
-        return array_map(static fn (array $row): array => [
-            'id' => $row['public_id'],
-            'role' => $row['sender_type'] === 'assistant' ? 'assistant' : 'user',
-            'text' => (string) $row['content'],
-            'status' => $row['status'],
-            'created_at' => $row['created_at'],
-            'updated_at' => $row['updated_at'],
-        ], $rows);
+        // Conversation content belongs to OpenClaw. MariaDB stores only relay
+        // correlation metadata, never a second copy of the conversation.
+        return [];
     }
 
     /** @return array<string, mixed>|null */
     public function findUserMessageByRequestId(int $conversationId, string $requestId): ?array
     {
         $statement = $this->database->pdo()->prepare(<<<'SQL'
-            SELECT m.public_id, m.status, gr.openclaw_run_id, am.public_id AS assistant_public_id
-            FROM messages m
-            LEFT JOIN gateway_runs gr ON gr.user_message_id = m.id
-            LEFT JOIN messages am ON am.gateway_run_id = gr.id AND am.sender_type = 'assistant'
-            WHERE m.conversation_id = :conversation_id
-              AND m.client_request_id = :client_request_id
+            SELECT public_id, state AS status, openclaw_run_id, assistant_public_id
+            FROM relay_requests
+            WHERE conversation_id = :conversation_id
+              AND client_request_id = :client_request_id
             LIMIT 1
             SQL);
         $statement->execute(['conversation_id' => $conversationId, 'client_request_id' => $requestId]);
@@ -169,15 +158,14 @@ final class ChatRepository
     {
         $publicId = Uuid::v4();
         $statement = $this->database->pdo()->prepare(<<<'SQL'
-            INSERT INTO messages (public_id, conversation_id, sender_type, sender_user_id, client_request_id, content, status)
-            VALUES (:public_id, :conversation_id, 'user', :sender_user_id, :client_request_id, :content, 'accepted')
+            INSERT INTO relay_requests (public_id, conversation_id, user_id, client_request_id, state)
+            VALUES (:public_id, :conversation_id, :user_id, :client_request_id, 'accepted')
             SQL);
         $statement->execute([
             'public_id' => $publicId,
             'conversation_id' => $conversationId,
-            'sender_user_id' => $userId,
+            'user_id' => $userId,
             'client_request_id' => $requestId,
-            'content' => $content,
         ]);
         return $publicId;
     }
@@ -186,35 +174,17 @@ final class ChatRepository
     public function createGatewayRun(int $conversationId, string $userMessagePublicId, string $openclawRunId): array
     {
         return $this->database->transaction(function (PDO $pdo) use ($conversationId, $userMessagePublicId, $openclawRunId): array {
-            $userStatement = $pdo->prepare('SELECT id FROM messages WHERE public_id = :public_id AND conversation_id = :conversation_id LIMIT 1');
+            $userStatement = $pdo->prepare('SELECT id FROM relay_requests WHERE public_id = :public_id AND conversation_id = :conversation_id LIMIT 1');
             $userStatement->execute(['public_id' => $userMessagePublicId, 'conversation_id' => $conversationId]);
             $userId = $userStatement->fetchColumn();
             if ($userId === false) {
                 throw new \RuntimeException('User message not found');
             }
 
-            $runPublicId = Uuid::v4();
-            $pdo->prepare('INSERT INTO gateway_runs (public_id, conversation_id, user_message_id, openclaw_run_id, state, started_at) VALUES (:public_id, :conversation_id, :user_message_id, :openclaw_run_id, \'running\', UTC_TIMESTAMP(6))')
-                ->execute([
-                    'public_id' => $runPublicId,
-                    'conversation_id' => $conversationId,
-                    'user_message_id' => (int) $userId,
-                    'openclaw_run_id' => $openclawRunId,
-                ]);
-            $runId = (int) $pdo->lastInsertId();
-
             $assistantPublicId = Uuid::v4();
-            $pdo->prepare('INSERT INTO messages (public_id, conversation_id, sender_type, gateway_run_id, content, status) VALUES (:public_id, :conversation_id, \'assistant\', :gateway_run_id, \'\', \'streaming\')')
-                ->execute([
-                    'public_id' => $assistantPublicId,
-                    'conversation_id' => $conversationId,
-                    'gateway_run_id' => $runId,
-                ]);
-            $assistantId = (int) $pdo->lastInsertId();
-            $pdo->prepare('UPDATE gateway_runs SET assistant_message_id = :assistant_message_id WHERE id = :id')
-                ->execute(['assistant_message_id' => $assistantId, 'id' => $runId]);
-
-            return ['run_id' => $runId, 'assistant_public_id' => $assistantPublicId];
+            $pdo->prepare('UPDATE relay_requests SET openclaw_run_id = :run_id, assistant_public_id = :assistant_id, state = \'running\' WHERE id = :id')
+                ->execute(['run_id' => $openclawRunId, 'assistant_id' => $assistantPublicId, 'id' => $userId]);
+            return ['run_id' => (int) $userId, 'assistant_public_id' => $assistantPublicId];
         });
     }
 
@@ -222,15 +192,11 @@ final class ChatRepository
     public function findRunByOpenClawId(int $conversationId, string $openclawRunId): ?array
     {
         $statement = $this->database->pdo()->prepare(<<<'SQL'
-            SELECT gr.id, gr.openclaw_run_id, gr.state,
-                   um.public_id AS user_public_id,
-                   am.public_id AS assistant_public_id,
-                   am.content AS assistant_content
-            FROM gateway_runs gr
-            INNER JOIN messages um ON um.id = gr.user_message_id
-            LEFT JOIN messages am ON am.id = gr.assistant_message_id
-            WHERE gr.conversation_id = :conversation_id
-              AND gr.openclaw_run_id = :openclaw_run_id
+            SELECT id, openclaw_run_id, state, public_id AS user_public_id,
+                   assistant_public_id
+            FROM relay_requests
+            WHERE conversation_id = :conversation_id
+              AND openclaw_run_id = :openclaw_run_id
             LIMIT 1
             SQL);
         $statement->execute(['conversation_id' => $conversationId, 'openclaw_run_id' => $openclawRunId]);
@@ -240,26 +206,17 @@ final class ChatRepository
 
     public function updateAssistantMessage(int $runId, string $content, string $status): void
     {
-        $statement = $this->database->pdo()->prepare('UPDATE messages SET content = :content, status = :status, updated_at = UTC_TIMESTAMP(6), completed_at = CASE WHEN :completed = 1 THEN UTC_TIMESTAMP(6) ELSE completed_at END WHERE gateway_run_id = :gateway_run_id AND sender_type = \'assistant\'');
-        $statement->execute([
-            'content' => $content,
-            'status' => $status,
-            'completed' => $status === 'completed' || $status === 'failed' ? 1 : 0,
-            'gateway_run_id' => $runId,
-        ]);
+        $this->database->pdo()->prepare('UPDATE relay_requests SET state = :state WHERE id = :id')->execute(['state' => $status, 'id' => $runId]);
     }
 
     public function assistantContent(int $runId): string
     {
-        $statement = $this->database->pdo()->prepare('SELECT content FROM messages WHERE gateway_run_id = :gateway_run_id AND sender_type = \'assistant\' LIMIT 1');
-        $statement->execute(['gateway_run_id' => $runId]);
-        $content = $statement->fetchColumn();
-        return is_string($content) ? $content : '';
+        return '';
     }
 
     public function finishRun(int $runId, string $state, ?string $errorCode = null, ?string $errorMessage = null): void
     {
-        $statement = $this->database->pdo()->prepare('UPDATE gateway_runs SET state = :state, error_code = :error_code, error_message = :error_message, finished_at = UTC_TIMESTAMP(6), updated_at = UTC_TIMESTAMP(6) WHERE id = :id');
+        $statement = $this->database->pdo()->prepare('UPDATE relay_requests SET state = :state, error_code = :error_code, error_message = :error_message WHERE id = :id');
         $statement->execute([
             'state' => $state,
             'error_code' => $errorCode,
@@ -270,7 +227,7 @@ final class ChatRepository
 
     public function markUserMessageFailed(int $conversationId, string $requestId): void
     {
-        $this->database->pdo()->prepare('UPDATE messages SET status = \'failed\', updated_at = UTC_TIMESTAMP(6) WHERE conversation_id = :conversation_id AND client_request_id = :client_request_id')
+        $this->database->pdo()->prepare('UPDATE relay_requests SET state = \'failed\' WHERE conversation_id = :conversation_id AND client_request_id = :client_request_id')
             ->execute(['conversation_id' => $conversationId, 'client_request_id' => $requestId]);
     }
 
