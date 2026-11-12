@@ -13,6 +13,7 @@ use Webchat\App\Database;
 use Webchat\App\Token;
 use Webchat\App\Uuid;
 use Webchat\Runtime\OpenClawProvisioner;
+use Webchat\Runtime\HermesProvisioner;
 
 final class AuthService
 {
@@ -107,6 +108,9 @@ final class AuthService
         if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) {
             $this->provisionAgent((int) $user['id']);
         }
+        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) {
+            $this->provisionHermes((int) $user['id']);
+        }
         return ['user' => $this->publicUser($result['user']), 'agent_created' => $result['agent_created']];
     }
 
@@ -124,6 +128,17 @@ final class AuthService
         $this->database->pdo()->prepare('INSERT INTO runtime_bindings (logical_agent_id, runtime, external_agent_id, workspace_ref, status) VALUES (:agent_id, \'openclaw\', :external_id, :workspace, \'active\') ON DUPLICATE KEY UPDATE external_agent_id = VALUES(external_agent_id), workspace_ref = VALUES(workspace_ref), status = \'active\'')
             ->execute(['agent_id' => $agent['id'], 'external_id' => $resource['external_agent_id'], 'workspace' => $resource['workspace']]);
         $this->database->pdo()->prepare('UPDATE logical_agents SET status = \'active\' WHERE id = :id')->execute(['id' => $agent['id']]);
+    }
+
+    private function provisionHermes(int $userId): void
+    {
+        $statement = $this->database->pdo()->prepare('SELECT u.public_id, u.display_name, u.email, rb.external_agent_id FROM users u LEFT JOIN runtime_bindings rb ON rb.logical_agent_id = (SELECT id FROM logical_agents WHERE user_id = u.id LIMIT 1) AND rb.runtime = \'hermes\' WHERE u.id = :user_id LIMIT 1');
+        $statement->execute(['user_id' => $userId]);
+        $user = $statement->fetch();
+        if (!is_array($user) || ($user['external_agent_id'] ?? null)) return;
+        $resource = (new HermesProvisioner($this->config))->provision((string) $user['public_id'], (string) $user['display_name'], (string) $user['email']);
+        $this->database->pdo()->prepare('INSERT INTO runtime_bindings (logical_agent_id, runtime, external_agent_id, workspace_ref, status) VALUES ((SELECT id FROM logical_agents WHERE user_id = :user_id LIMIT 1), \'hermes\', :external_id, :workspace, \'active\') ON DUPLICATE KEY UPDATE external_agent_id = VALUES(external_agent_id), workspace_ref = VALUES(workspace_ref), status = \'active\'')
+            ->execute(['user_id' => $userId, 'external_id' => $resource['external_agent_id'], 'workspace' => $resource['workspace']]);
     }
 
     /** @return array{user: array<string,mixed>, session_token: string} */

@@ -30,12 +30,25 @@ Telegram y WhatsApp con sus identidades externas y pairing real.
   OpenClaw provisionado.
 - `OPENCLAW_PROVISIONING_ENABLED=1` activa el comando controlado `openclaw agents add`.
 
+El provisioning de runtimes se delega al repositorio `agent-admin`, que debe estar
+instalado en el host. Define `OPENCLAW_ADMIN_SCRIPT` y `HERMES_ADMIN_SCRIPT` con las
+rutas a sus managers Python. WebChat no modifica la configuración interna de OpenClaw
+ni el estado de Hermes; solo persiste en `runtime_bindings` el resultado de cada
+operación. Para OpenClaw, el binding de Telegram/WhatsApp usa `bind-peer` y conserva
+la identidad externa como un peer directo.
+
 Para activar provisioning en un entorno de pruebas, define también un workspace permitido:
 
 ```dotenv
 OPENCLAW_PROVISIONING_ENABLED=1
 OPENCLAW_AGENT_WORKSPACE_ROOT=/var/lib/openclaw/workspaces
+OPENCLAW_ADMIN_SCRIPT=/opt/iaamx/agent-admin/skills/openclaw-agent-admin/scripts/manager.py
+ADMIN_AGENTS_PYTHON=python3
 ```
+
+Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_ENABLED=1`
+y configura `HERMES_ADMIN_SCRIPT` y `HERMES_HOME`. El perfil recibe contexto aislado
+(`SOUL.md`, `memories/USER.md` y `AGENTS.md`) mediante el administrador oficial.
 
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-206 (dashboard con botón flotante) e IAADL-205 (panel de AI Assistant).
 

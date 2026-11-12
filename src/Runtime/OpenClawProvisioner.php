@@ -19,16 +19,11 @@ final class OpenClawProvisioner
         $agentId = 'webchat-' . strtolower(str_replace('-', '', $agentPublicId));
         $root = rtrim($this->config->required('OPENCLAW_AGENT_WORKSPACE_ROOT'), '/');
         $workspace = $root . '/' . $agentId;
-        $command = ['openclaw', 'agents', 'add', '--non-interactive', '--workspace', $workspace, '--json', $agentId];
-        $process = proc_open($command, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
-        if (!is_resource($process)) throw new RuntimeException('No fue posible iniciar el provisioning de OpenClaw.');
-        fclose($pipes[0]);
-        $output = stream_get_contents($pipes[1]); fclose($pipes[1]);
-        $error = stream_get_contents($pipes[2]); fclose($pipes[2]);
-        $exitCode = proc_close($process);
-        if ($exitCode !== 0) throw new RuntimeException('OpenClaw no pudo crear el agente: ' . trim($error));
-        $decoded = json_decode((string) $output, true);
-        $externalId = is_array($decoded) && is_string($decoded['id'] ?? null) ? $decoded['id'] : $agentId;
+        $result = (new AdminAgentsClient($this->config))->openclaw(
+            'create', $agentId, '--workspace', $workspace, '--agent-dir', $root . '/.agents/' . $agentId,
+        );
+        $payload = $result['results'][0]['data'] ?? [];
+        $externalId = is_array($payload) && is_string($payload['id'] ?? null) ? $payload['id'] : $agentId;
         return ['external_agent_id' => $externalId, 'workspace' => $workspace];
     }
 }
