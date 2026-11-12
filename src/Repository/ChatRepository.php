@@ -93,7 +93,10 @@ final class ChatRepository
             if (!is_array($row)) throw new \RuntimeException('Authenticated user is not available.');
             $sessionPublicId = Uuid::v4();
             $conversationPublicId = Uuid::v4();
-            $agentId = (string) ($row['external_agent_id'] ?: $config->get('OPENCLAW_AGENT_ID', 'main'));
+            $agentId = (string) ($row['external_agent_id'] ?? '');
+            if ($agentId === '') {
+                throw new \RuntimeException('El agente todavía está en provisioning.');
+            }
             $gatewaySessionKey = $config->gatewaySessionKeyForAgent($agentId, $sessionPublicId);
             $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $config->int('WEBCHAT_SESSION_TTL', 2592000) . ' seconds')->format('Y-m-d H:i:s.u');
             $pdo->prepare('INSERT INTO conversations (public_id, gateway_session_key, title) VALUES (:public_id, :gateway_session_key, :title)')->execute(['public_id' => $conversationPublicId, 'gateway_session_key' => $gatewaySessionKey, 'title' => 'WebChat']);
@@ -113,7 +116,7 @@ final class ChatRepository
                    c.gateway_session_key,
                    u.public_id AS user_public_id,
                    u.display_name,
-                   COALESCE(rb.external_agent_id, :default_agent) AS agent_id
+                   rb.external_agent_id AS agent_id
             FROM web_sessions ws
             INNER JOIN conversations c ON c.id = ws.conversation_id
             INNER JOIN users u ON u.id = ws.user_id
@@ -123,7 +126,7 @@ final class ChatRepository
               AND ws.expires_at > UTC_TIMESTAMP(6)
             LIMIT 1
             SQL);
-        $statement->execute(['public_id' => $publicId, 'default_agent' => 'main']);
+        $statement->execute(['public_id' => $publicId]);
         $row = $statement->fetch();
         return is_array($row) ? $row : null;
     }

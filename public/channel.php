@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/config/bootstrap.php';
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+
+$channel = strtolower(trim((string) ($_GET['channel'] ?? '')));
+$identity = trim((string) ($_POST['external_identity'] ?? $_GET['external_identity'] ?? ''));
+if (!in_array($channel, ['telegram', 'whatsapp'], true) || $identity === '') {
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => 'Canal o identidad no válidos'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$resolved = webchat_channels()->resolve($channel, $identity);
+if ($resolved === null) {
+    $base = rtrim((string) (webchat_config()->get('WEBCHAT_PUBLIC_BASE_URL', '') ?: '/'), '/');
+    echo json_encode(['ok' => true, 'registered' => false, 'action' => 'register', 'webchat_url' => $base . '/'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+echo json_encode(['ok' => true, 'registered' => true, 'action' => 'route_to_agent'], JSON_UNESCAPED_UNICODE);

@@ -21,6 +21,22 @@ Pendiente de la siguiente iteración: eliminar las tablas legacy del relay y hac
 el historial sea exclusivamente el de OpenClaw; implementar webhooks/adaptadores de
 Telegram y WhatsApp con sus identidades externas y pairing real.
 
+## Siguiente bloque implementado
+
+- `public/channel.php` resuelve una identidad de Telegram/WhatsApp sin exponer el agente.
+- Una identidad desconocida recibe la URL del WebChat y no se enruta a OpenClaw.
+- `pairing_attempts` guarda desafíos temporales y `channel_identities` guarda el vínculo confirmado.
+- El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
+  OpenClaw provisionado.
+- `OPENCLAW_PROVISIONING_ENABLED=1` activa el comando controlado `openclaw agents add`.
+
+Para activar provisioning en un entorno de pruebas, define también un workspace permitido:
+
+```dotenv
+OPENCLAW_PROVISIONING_ENABLED=1
+OPENCLAW_AGENT_WORKSPACE_ROOT=/var/lib/openclaw/workspaces
+```
+
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-206 (dashboard con botón flotante) e IAADL-205 (panel de AI Assistant).
 
 ## Arquitectura

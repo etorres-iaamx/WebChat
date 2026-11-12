@@ -43,6 +43,12 @@ function webchat_auth(): Webchat\Auth\AuthService
     return $auth ??= new Webchat\Auth\AuthService(webchat_db(), webchat_config());
 }
 
+function webchat_channels(): Webchat\Channels\ChannelIdentityService
+{
+    static $channels;
+    return $channels ??= new Webchat\Channels\ChannelIdentityService(webchat_db());
+}
+
 function webchat_h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

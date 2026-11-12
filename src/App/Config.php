@@ -38,6 +38,7 @@ final class Config
             'WEBCHAT_SESSION_TTL' => '2592000',
             'WEBCHAT_MAX_MESSAGE_LENGTH' => '4000',
             'WEBCHAT_VISITOR_NAME' => 'Visitante IAAMX',
+            'WEBCHAT_PUBLIC_BASE_URL' => '',
             'AUTH_SESSION_TTL' => '2592000',
             'HIMALAYA_ENABLED' => '0',
             'HIMALAYA_ACCOUNT' => 'agent',

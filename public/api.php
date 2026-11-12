@@ -55,6 +55,17 @@ try {
         $user = $auth->userFromSession(auth_token());
         json_response(['ok' => true, 'authenticated' => $user !== null, 'user' => $user]);
     }
+    if ($action === 'pairing/start' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        json_response(['ok' => true, 'data' => webchat_channels()->startPairing($userId, (string) ($data['channel'] ?? ''), (string) ($data['external_identity'] ?? ''))], 201);
+    }
+    if ($action === 'pairing/confirm' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        webchat_channels()->confirmPairing($userId, (string) ($data['pairing_id'] ?? ''), (string) ($data['challenge'] ?? ''));
+        json_response(['ok' => true]);
+    }
     json_response(['ok' => false, 'error' => 'Ruta no encontrada.'], 404);
 } catch (Throwable $exception) {
     $message = webchat_config()->get('APP_ENV', 'local') === 'production' ? 'No fue posible completar la operación.' : $exception->getMessage();
