@@ -1,0 +1,10 @@
+{
+    auto_https off
+}
+
+:8080 {
+    @webchat_ws path /webchat/ws
+    reverse_proxy @webchat_ws 127.0.0.1:8081
+
+    reverse_proxy 127.0.0.1:8082
+}
