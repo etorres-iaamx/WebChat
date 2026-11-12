@@ -1,8 +1,12 @@
 (() => {
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
+  const tabs = document.querySelector('.tabs');
+  const tabButtons = [...document.querySelectorAll('[data-tab]')];
+  let registrationStarted = false;
   const setStatus = (text, error = false) => { status.textContent = text; status.dataset.error = error ? 'true' : 'false'; };
-  document.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => {
+  tabButtons.forEach((button) => button.addEventListener('click', () => {
+    if (registrationStarted && button.dataset.tab === 'register') return;
     document.querySelectorAll('[data-tab]').forEach((item) => item.classList.toggle('is-active', item === button));
     Object.entries(forms).forEach(([key, form]) => { form.hidden = key !== button.dataset.tab; });
     setStatus('');
@@ -15,8 +19,29 @@
     return body.data || {};
   }
   forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = './webchat/index.php'; } catch (error) { setStatus(error.message, true); } });
-  forms.register?.addEventListener('submit', async (event) => { event.preventDefault(); try { const data = await submit(forms.register, 'register'); forms.verify.email.value = data.user.email; forms.register.hidden = true; forms.login.hidden = true; forms.verify.hidden = false; setStatus('Revisa tu correo e introduce el código de verificación.'); } catch (error) { setStatus(error.message, true); } });
-  forms.verify?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.verify, 'verify'); setStatus('Correo verificado. Ya puedes iniciar sesión.'); forms.verify.hidden = true; forms.login.hidden = false; } catch (error) { setStatus(error.message, true); } });
+  forms.register?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (registrationStarted) return;
+    try {
+      const data = await submit(forms.register, 'register');
+      registrationStarted = true;
+      forms.verify.email.value = data.user.email;
+      forms.register.hidden = true;
+      forms.login.hidden = true;
+      forms.verify.hidden = false;
+      if (tabs) tabs.hidden = true;
+      setStatus('Revisa tu correo e introduce el código de verificación.');
+    } catch (error) { setStatus(error.message, true); }
+  });
+  forms.verify?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      await submit(forms.verify, 'verify');
+      setStatus('Correo verificado. Ya puedes iniciar sesión.');
+      forms.verify.hidden = true;
+      forms.login.hidden = false;
+    } catch (error) { setStatus(error.message, true); }
+  });
   document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => { await fetch('./api.php?action=logout', {method: 'POST'}); location.reload(); });
   const pairingStart = forms['pairing-start'];
   const pairingConfirm = forms['pairing-confirm'];
