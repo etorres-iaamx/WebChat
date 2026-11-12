@@ -18,10 +18,6 @@ final class OpenClawBindingManager
         if (!$this->config->bool('OPENCLAW_BINDING_ENABLED', false)) return;
         if (!in_array($channel, ['telegram', 'whatsapp'], true)) throw new RuntimeException('Canal no soportado para binding.');
         if (!preg_match('/^[A-Za-z0-9_+:.@-]+$/', $externalIdentity)) throw new RuntimeException('Identidad de canal inválida.');
-        (new AdminAgentsClient($this->config))->openclaw(
-            'bind-peer', $agentId, '--channel', $channel,
-            '--account', (string) $this->config->get('OPENCLAW_CHANNEL_ACCOUNT_ID', 'default'),
-            '--peer-id', $externalIdentity,
-        );
+        (new LocalOpenClawAdmin($this->config))->bindPeer($agentId, $channel, $externalIdentity);
     }
 }

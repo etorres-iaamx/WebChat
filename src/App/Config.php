@@ -32,10 +32,6 @@ final class Config
             'OPENCLAW_BINDING_ENABLED' => '0',
             'OPENCLAW_BINDING_LOCK' => '/tmp/webchat-openclaw-bindings.lock',
             'OPENCLAW_CHANNEL_ACCOUNT_ID' => 'default',
-            'ADMIN_AGENTS_ROOT' => '',
-            'ADMIN_AGENTS_PYTHON' => 'python3',
-            'OPENCLAW_ADMIN_SCRIPT' => '',
-            'HERMES_ADMIN_SCRIPT' => '',
             'HERMES_PROVISIONING_ENABLED' => '0',
             'HERMES_HOME' => '',
             'HERMES_PROFILE_PREFIX' => 'webchat-',
@@ -186,22 +182,4 @@ final class Config
         return 'agent:' . trim($agentId, ':') . ':webchat:' . substr($sessionPublicId, 0, 12);
     }
 
-    public function adminAgentsRoot(): string
-    {
-        return rtrim($this->required('ADMIN_AGENTS_ROOT'), '/');
-    }
-
-    public function openclawAdminScript(): string
-    {
-        return trim((string) $this->get('OPENCLAW_ADMIN_SCRIPT', '')) !== ''
-            ? $this->required('OPENCLAW_ADMIN_SCRIPT')
-            : $this->adminAgentsRoot() . '/skills/openclaw-agent-admin/scripts/manager.py';
-    }
-
-    public function hermesAdminScript(): string
-    {
-        return trim((string) $this->get('HERMES_ADMIN_SCRIPT', '')) !== ''
-            ? $this->required('HERMES_ADMIN_SCRIPT')
-            : $this->adminAgentsRoot() . '/skills/hermes-profile-admin/scripts/manager.py';
-    }
 }
