@@ -38,6 +38,7 @@ $config = new Config([
     'OPENCLAW_SESSION_KEY_PREFIX' => 'agent:main:webchat-iaamx',
 ]);
 $assert($config->gatewaySessionKey('12345678-1234-4234-8234-123456789012') === 'agent:main:webchat-iaamx:12345678-123', 'gateway session key is scoped');
+$assert($config->gatewaySessionKeyForAgent('webchat-agent-1', '12345678-1234-4234-8234-123456789012') === 'agent:webchat-agent-1:webchat:12345678-123', 'per-agent gateway session key is scoped');
 $assert($config->publicWebSocketUrl('127.0.0.1:8082', false) === 'ws://127.0.0.1:8081/webchat/ws', 'local WebSocket URL uses relay port');
 
 printf("PASS (%d assertions)\n", $assertions);
