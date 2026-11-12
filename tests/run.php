@@ -34,6 +34,7 @@ $assert(is_array($decodedClient) && $decodedClient['payload'] === '{"type":"ping
 
 $config = new Config([
     'WEBCHAT_WS_PORT' => '8081',
+    'WEBCHAT_PUBLIC_WS_URL' => '',
     'WEBCHAT_PUBLIC_WS_PATH' => '/webchat/ws',
     'OPENCLAW_SESSION_KEY_PREFIX' => 'agent:main:webchat-iaamx',
 ]);
