@@ -71,7 +71,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light">
     <title>IAAMXORG · Panel de control</title>
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles.css?v=20261113-1512">
 </head>
 <body>
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
@@ -97,9 +97,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
             </nav>
         </aside>
         <section class="dashboard-main" aria-label="Contenido del dashboard">
-            <header class="dashboard-topbar">
-                <span class="dashboard-topbar__title">IAAMXORG</span>
-            </header>
             <div class="dashboard-background" aria-hidden="true"></div>
         </section>
     </main>

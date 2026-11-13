@@ -74,16 +74,12 @@ button { cursor: pointer; touch-action: manipulation; }
 .sidebar-section-title { margin: 9px 16px 6px; color: #8d96a5; font-size: 13px; }
 .sidebar-link { display: flex; min-height: 39px; align-items: center; gap: 11px; padding: 0 16px; color: #c5ccd6; font-size: 13px; text-decoration: none; transition: color 120ms ease, background 120ms ease; }
 .sidebar-link--button { width: 100%; border: 0; background: transparent; text-align: left; }
-.sidebar-link:hover, .sidebar-link.is-active { color: #fff; background: rgba(255, 255, 255, .08); }
+.sidebar-link:hover, .sidebar-link.is-active { color: #fff; background: #344056; }
 .sidebar-link__icon { display: inline-grid; width: 16px; place-items: center; color: #9ca5b4; font-size: 16px; }
 .sidebar-link.is-active .sidebar-link__icon { color: #ffb0a4; }
 
 .dashboard-main { position: relative; min-width: 0; flex: 1; overflow: hidden; }
-.dashboard-topbar { position: relative; z-index: 2; display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid #e7e8e9; color: #30343b; background: rgba(255, 255, 255, .96); }
-.dashboard-topbar__title { font-size: 15px; font-weight: 700; letter-spacing: .08em; }
-.dashboard-topbar__actions { display: flex; gap: 22px; color: #737982; font-size: 21px; }
-
-.dashboard-main .dashboard-background { inset: 64px 0 0; }
+.dashboard-main .dashboard-background { inset: 0; }
 
 .dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar { width: 70px; min-width: 70px; }
 .dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; padding: 0; }
@@ -229,7 +225,6 @@ button { cursor: pointer; touch-action: manipulation; }
     .sidebar-profile { justify-content: center; padding-inline: 0; }
     .sidebar-profile__copy, .sidebar-search, .sidebar-section-title, .sidebar-link span:last-child { display: none; }
     .sidebar-link { justify-content: center; padding-inline: 0; }
-    .dashboard-topbar { padding-inline: 16px; }
     .dashboard-background {
         background-image: url("./assets/background-iaamx.jpg");
         background-position: center center;
