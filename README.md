@@ -62,6 +62,9 @@ fuera de esta etapa. Ajustes permite guardar en el navegador el tema, el estado 
 del sidebar y el modo inicial del asistente. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
+Cada opción de Ajustes incluye ayuda contextual accesible mediante un icono `?`; las
+explicaciones indican el efecto de la preferencia antes de guardarla.
+
 El asistente conserva una única conversación mientras cambia de presentación: puede
 flotar sobre el dashboard, integrarse en el área principal o abrirse en una ventana
 independiente. El modo pop-out desactiva temporalmente la ventana origen y la reactiva

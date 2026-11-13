@@ -478,6 +478,13 @@
         setSidebarCollapsed(settings.sidebar === 'collapsed');
         if (settingsStatus) settingsStatus.textContent = 'Ajustes guardados en este navegador.';
     });
+    document.querySelectorAll('[data-setting-help]').forEach((button) => button.addEventListener('click', () => {
+        const help = document.getElementById(button.dataset.settingHelp || '');
+        if (!help) return;
+        const expanded = help.hidden;
+        help.hidden = !expanded;
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }));
     embedButton?.addEventListener('click', toggleEmbedded);
     maximizeButton?.addEventListener('click', toggleMaximized);
     popoutButton?.addEventListener('click', openPopout);
