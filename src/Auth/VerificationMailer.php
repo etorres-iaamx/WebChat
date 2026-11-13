@@ -21,7 +21,7 @@ final class VerificationMailer
             return;
         }
 
-        $command = [$this->config->required('HIMALAYA_BINARY'), '--account', $this->config->required('HIMALAYA_ACCOUNT'), 'template', 'send'];
+        $command = [$this->config->required('HIMALAYA_BINARY'), '--account', $this->config->required('HIMALAYA_ACCOUNT'), 'message', 'send'];
         $process = @proc_open($command, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
         if (!is_resource($process)) {
             throw new RuntimeException('No fue posible iniciar Himalaya. Verifica HIMALAYA_BINARY.');
