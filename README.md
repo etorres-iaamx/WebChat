@@ -64,8 +64,9 @@ se muestran hasta contar con backend y navegación reales.
 
 La ruta pública `/webchat/` es únicamente la pantalla de inicio de sesión y registro.
 Después de autenticar, redirige directamente al dashboard protegido en
-`/webchat/dashboard`. La ruta técnica anterior `/webchat/webchat/index.php` se conserva
-solo como redirección de compatibilidad; no es una URL canónica.
+`/webchat/dashboard`. Las rutas técnicas `/webchat/index.php` y
+`/webchat/webchat/index.php` no son públicas y responden `404`; el dashboard se sirve
+internamente mediante el rewrite de Caddy.
 
 Perfil reserva opciones para foto de perfil, cambio de contraseña y vinculación de
 Telegram/WhatsApp. Actualmente se muestran deshabilitadas como “Próximamente”; no
