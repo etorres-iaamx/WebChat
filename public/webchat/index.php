@@ -8,9 +8,8 @@ use Webchat\App\Token;
 
 $config = webchat_config();
 $authToken = (string) ($_COOKIE['webchat_auth'] ?? '');
-$authUser = webchat_auth()->userFromSession($authToken);
 $authUserId = webchat_auth()->userIdFromSession($authToken);
-if ($authUser === null || $authUserId === null) {
+if ($authUserId === null) {
     header('Location: ../index.php');
     exit;
 }

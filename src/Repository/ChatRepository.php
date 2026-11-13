@@ -87,14 +87,6 @@ final class ChatRepository
         return is_array($row) ? $row : null;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function history(int $conversationId, int $limit = 50): array
-    {
-        // Conversation content belongs to OpenClaw. MariaDB stores only relay
-        // correlation metadata, never a second copy of the conversation.
-        return [];
-    }
-
     /** @return array<string, mixed>|null */
     public function findUserMessageByRequestId(int $conversationId, string $requestId): ?array
     {
@@ -158,16 +150,6 @@ final class ChatRepository
         $statement->execute(['conversation_id' => $conversationId, 'openclaw_run_id' => $openclawRunId]);
         $row = $statement->fetch();
         return is_array($row) ? $row : null;
-    }
-
-    public function updateAssistantMessage(int $runId, string $content, string $status): void
-    {
-        $this->database->pdo()->prepare('UPDATE relay_requests SET state = :state WHERE id = :id')->execute(['state' => $status, 'id' => $runId]);
-    }
-
-    public function assistantContent(int $runId): string
-    {
-        return '';
     }
 
     public function finishRun(int $runId, string $state, ?string $errorCode = null, ?string $errorMessage = null): void

@@ -47,7 +47,6 @@ final class Config
             'WEBCHAT_SESSION_TTL' => '2592000',
             'WEBCHAT_MAX_MESSAGE_LENGTH' => '4000',
             'WEBCHAT_PUBLIC_BASE_URL' => '',
-            'AUTH_SESSION_TTL' => '2592000',
             'AUTH_SESSION_TTL_SHORT' => '43200',
             'AUTH_SESSION_TTL_PERSISTENT' => '2592000',
             'AUTH_SESSION_IDLE_TTL' => '43200',

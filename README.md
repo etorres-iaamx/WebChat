@@ -168,7 +168,7 @@ Caddy conserva la actualización WebSocket en `/webchat/ws`; las rutas HTTP se s
 - Límite de mensaje configurable y `request_id` idempotente por conversación.
 - El Gateway nunca se conecta desde el navegador.
 
-Para un despliegue público real todavía conviene añadir autenticación de usuarios, rate limiting por IP/identidad, observabilidad y rotación gestionada de secretos.
+Para un despliegue público real todavía conviene añadir rate limiting por IP/identidad, observabilidad y rotación gestionada de secretos.
 
 ## Verificación
 
@@ -177,3 +177,17 @@ php tests/run.php
 find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
 git diff --check
 ```
+
+La revisión debe incluir referencias a métodos y configuraciones, además de las
+pruebas funcionales. Para evitar falsos positivos, se distinguen dos hallazgos:
+
+- **Código redundante:** código que sí se ejecuta, pero duplica una validación,
+  consulta, transformación o fuente de datos que ya realiza otra capa.
+- **Código no usado:** clase, método, configuración, ruta o recurso que permanece
+  en el repositorio, pero no tiene consumidores ni forma parte de una ruta activa.
+
+En cada prueba se debe comprobar ambos aspectos: no reintroducir usuarios anónimos,
+sesiones técnicas sin usuario final ni copias del historial de OpenClaw; y revisar
+que los cambios no dejen métodos, variables o configuraciones sin consumidores.
+Cuando se modifique código, esta sección y la documentación de arquitectura deben
+actualizarse en el mismo cambio.
