@@ -77,7 +77,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
         <aside class="dashboard-sidebar" data-sidebar>
             <div class="sidebar-brand">
-                <img class="sidebar-brand__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
+                <img class="sidebar-brand__logo" src="./assets/iaa-mx-pleno-oscuro.svg" alt="IAA MX">
                 <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menú" aria-expanded="true">
                     <span aria-hidden="true">‹</span>
                 </button>
