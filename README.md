@@ -118,7 +118,11 @@ FLUSH PRIVILEGES;
 Las migraciones crean las entidades de identidad, sesión y correlación del relay. Desde
 `004_openclaw_history_only.sql`, el contenido de conversación no se guarda en MariaDB:
 el historial se obtiene exclusivamente con `chat.history` de OpenClaw; `relay_requests`
-solo conserva request IDs, run IDs y estados técnicos para idempotencia.
+solo conserva request IDs, run IDs y estados técnicos para idempotencia. La migración
+`008_drop_legacy_relay_tables.sql` elimina físicamente `messages` y `gateway_runs`;
+esas tablas no forman parte del runtime actual. Esa migración requiere ejecutarse
+una vez con una cuenta DBA, porque el usuario de la aplicación no tiene permiso
+`DROP`; después debe registrarse como aplicada en `schema_migrations`.
 
 ## OpenClaw Gateway
 
