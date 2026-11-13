@@ -47,10 +47,43 @@
     let lastNonMaximizedMode = 'floating';
     let popupWindow = null;
     let popupMonitor = null;
+    let sessionCheckTimer = null;
+    let redirectingToAuth = false;
     let sourceModeBeforePopup = 'floating';
     const messages = new Map();
     const pendingOutbound = [];
     const pendingRuns = new Map();
+
+    function redirectToAuth() {
+        if (redirectingToAuth) return;
+        redirectingToAuth = true;
+        window.clearTimeout(reconnectTimer);
+        window.clearInterval(sessionCheckTimer);
+        closedByUser = true;
+        socket?.close(1000, 'session expired');
+        window.location.replace('/webchat/');
+    }
+
+    async function checkSession() {
+        if (redirectingToAuth) return false;
+        try {
+            const response = await fetch('/webchat/api.php?action=me', {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { Accept: 'application/json' },
+            });
+            const payload = await response.json();
+            if (!response.ok || payload.authenticated !== true) {
+                redirectToAuth();
+                return false;
+            }
+            return true;
+        } catch (_) {
+            // A transient network failure must not log the user out. The next
+            // heartbeat or the server-side dashboard guard will retry.
+            return true;
+        }
+    }
 
     function setConnection(state, label) {
         if (connectionLabel) connectionLabel.textContent = label;
@@ -176,6 +209,7 @@
             socket = null;
             setTyping(false);
             setConnection('error', 'Desconectado');
+            void checkSession();
             if (!closedByUser && !panel.hidden) {
                 window.clearTimeout(reconnectTimer);
                 reconnectTimer = window.setTimeout(connect, 2500);
@@ -506,6 +540,9 @@
     applyStoredSettings();
     setConnection('idle', 'Listo para ayudarte');
     setChatMode('floating');
+    void checkSession();
+    sessionCheckTimer = window.setInterval(checkSession, 60000);
+    window.addEventListener('pageshow', () => { void checkSession(); });
 
     if (isPopupWindow) {
         document.body.classList.add('popup-window');

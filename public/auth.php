@@ -1,9 +1,15 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
+$authHeaders = [
+    'Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
+    'Pragma: no-cache',
+    'Expires: 0',
+];
+foreach ($authHeaders as $header) header($header);
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
 if ($auth !== null) {
-    header('Location: ./dashboard');
+    header('Location: /webchat/dashboard');
     exit;
 }
 ?><!doctype html>

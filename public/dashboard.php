@@ -6,6 +6,11 @@ require dirname(__DIR__) . '/config/bootstrap.php';
 
 use Webchat\App\Token;
 
+// Never let a browser restore this protected document after logout or expiry.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 $config = webchat_config();
 $authToken = (string) ($_COOKIE['webchat_auth'] ?? '');
 $authUser = webchat_auth()->userFromSession($authToken, true);
