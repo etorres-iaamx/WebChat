@@ -47,7 +47,6 @@
     let lastNonMaximizedMode = 'floating';
     let popupWindow = null;
     let popupMonitor = null;
-    let sessionCheckTimer = null;
     let redirectingToAuth = false;
     let sourceModeBeforePopup = 'floating';
     const messages = new Map();
@@ -58,7 +57,6 @@
         if (redirectingToAuth) return;
         redirectingToAuth = true;
         window.clearTimeout(reconnectTimer);
-        window.clearInterval(sessionCheckTimer);
         closedByUser = true;
         socket?.close(1000, 'session expired');
         window.location.replace('/webchat/');
@@ -541,7 +539,6 @@
     setConnection('idle', 'Listo para ayudarte');
     setChatMode('floating');
     void checkSession();
-    sessionCheckTimer = window.setInterval(checkSession, 60000);
     window.addEventListener('pageshow', () => { void checkSession(); });
 
     if (isPopupWindow) {
