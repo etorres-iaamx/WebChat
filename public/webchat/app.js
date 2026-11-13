@@ -22,7 +22,6 @@
     const dashboardShell = document.querySelector('.dashboard-shell');
     const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
     const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
-    const dashboardAssistant = document.querySelector('[data-dashboard-assistant]');
     const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
     const query = new URLSearchParams(window.location.search);
@@ -398,7 +397,6 @@
     launcher?.addEventListener('click', showPanel);
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
     sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); showPanel(); });
-    dashboardAssistant?.addEventListener('click', () => showPanel());
     embedButton?.addEventListener('click', toggleEmbedded);
     maximizeButton?.addEventListener('click', toggleMaximized);
     popoutButton?.addEventListener('click', openPopout);

@@ -85,14 +85,6 @@ button { cursor: pointer; touch-action: manipulation; }
 .dashboard-topbar__actions { display: flex; gap: 22px; color: #737982; font-size: 21px; }
 
 .dashboard-main .dashboard-background { inset: 64px 0 0; }
-.dashboard-card { position: absolute; z-index: 1; top: 50%; left: 50%; width: min(600px, calc(100% - 48px)); padding: 42px 48px; border-radius: 4px; color: #252a31; background: rgba(255, 255, 255, .94); box-shadow: 0 12px 32px rgba(45, 52, 62, .14); text-align: center; transform: translate(-50%, -50%); }
-.dashboard-card__avatar { display: grid; width: 76px; height: 76px; margin: 0 auto 14px; place-items: center; border-radius: 50%; color: #fff; background: #837477; font-size: 22px; font-weight: 750; }
-.dashboard-card__eyebrow { margin: 0 0 8px; color: #7f858c; font-size: 13px; }
-.dashboard-card h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.04em; }
-.dashboard-card p:not(.dashboard-card__eyebrow) { max-width: 420px; margin: 12px auto 22px; color: #69717a; line-height: 1.5; }
-.dashboard-card__hint { margin-top: -12px !important; font-size: 13px; }
-.dashboard-card__action { min-height: 42px; padding: 0 20px; border: 0; border-radius: 7px; color: #fff; background: var(--accent); font-weight: 650; }
-.dashboard-card__action:hover { background: var(--accent-dark); }
 
 .dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar { width: 70px; min-width: 70px; }
 .dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; padding: 0; }
@@ -240,8 +232,6 @@ button { cursor: pointer; touch-action: manipulation; }
     .sidebar-profile__copy, .sidebar-search, .sidebar-section-title, .sidebar-link span:last-child { display: none; }
     .sidebar-link { justify-content: center; padding-inline: 0; }
     .dashboard-topbar { padding-inline: 16px; }
-    .dashboard-card { width: calc(100% - 28px); padding: 30px 22px; }
-    .dashboard-card h1 { font-size: 24px; }
     .dashboard-background {
         background-image: url("./assets/office-background-mobile.png");
         background-position: center center;

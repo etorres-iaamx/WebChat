@@ -52,7 +52,8 @@ y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 `memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-200/201/202/203/204:
-dashboard con barra lateral, perfil central y asistente contextual. En esta etapa la
+dashboard con barra lateral, fondo de oficina y asistente contextual. El perfil del
+usuario se muestra en la barra lateral para mantener despejada el área central. En esta etapa la
 interfaz solo expone controles con funcionalidad implementada: AI Assistant, abrir el
 asistente desde el dashboard, colapsar el menú, cambiar entre modo flotante/integrado,
 maximizar, abrir pop-out, minimizar, cerrar y cerrar sesión. Las secciones futuras no

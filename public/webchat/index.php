@@ -101,14 +101,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                 <span class="dashboard-topbar__title">IAAMXORG</span>
             </header>
             <div class="dashboard-background" aria-hidden="true"></div>
-            <section class="dashboard-card" aria-labelledby="dashboard-card-title">
-                <div class="dashboard-card__avatar" aria-hidden="true"><?= webchat_h(mb_strtoupper(mb_substr((string) $authUser['name'], 0, 2))) ?></div>
-                <p class="dashboard-card__eyebrow">Perfil de usuario</p>
-                <h1 id="dashboard-card-title"><?= webchat_h((string) $authUser['name']) ?></h1>
-                <p><?= webchat_h((string) $authUser['email']) ?></p>
-                <p class="dashboard-card__hint">Tu asistente está asociado a esta cuenta y conserva su conversación en OpenClaw.</p>
-                <button class="dashboard-card__action" type="button" data-dashboard-assistant>Hablar con el asistente</button>
-            </section>
         </section>
     </main>
 
