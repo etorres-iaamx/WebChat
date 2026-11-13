@@ -31,7 +31,6 @@
     const settingsForm = document.querySelector('[data-settings-form]');
     const settingsTheme = document.querySelector('[data-setting-theme]');
     const settingsSidebar = document.querySelector('[data-setting-sidebar]');
-    const settingsAssistantMode = document.querySelector('[data-setting-assistant-mode]');
     const settingsStatus = document.querySelector('[data-settings-status]');
     const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
@@ -406,7 +405,6 @@
         applyTheme(settings.theme || 'system');
         if (settingsSidebar) settingsSidebar.value = settings.sidebar === 'collapsed' ? 'collapsed' : 'expanded';
         if (settingsTheme) settingsTheme.value = ['system', 'light', 'dark'].includes(settings.theme) ? settings.theme : 'system';
-        if (settingsAssistantMode) settingsAssistantMode.value = settings.assistantMode === 'embedded' ? 'embedded' : 'floating';
         if (settings.sidebar === 'collapsed') setSidebarCollapsed(true);
     }
 
@@ -463,7 +461,7 @@
         }
     }
 
-    launcher?.addEventListener('click', () => showPanel(storedSettings().assistantMode === 'embedded' ? 'embedded' : 'floating'));
+    launcher?.addEventListener('click', () => showPanel());
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
     sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); hideProfile(); setActiveSidebarItem(sidebarAssistant); showPanel(); });
     sidebarProfile?.addEventListener('click', showProfile);
@@ -472,7 +470,7 @@
     settingsClose?.addEventListener('click', () => { hideSettings(); setActiveSidebarItem(sidebarAssistant); });
     settingsForm?.addEventListener('submit', (event) => {
         event.preventDefault();
-        const settings = { theme: settingsTheme?.value || 'system', sidebar: settingsSidebar?.value || 'expanded', assistantMode: settingsAssistantMode?.value || 'floating' };
+        const settings = { theme: settingsTheme?.value || 'system', sidebar: settingsSidebar?.value || 'expanded' };
         try { window.localStorage.setItem('iaamx-settings', JSON.stringify(settings)); } catch (_) { /* storage is optional */ }
         applyTheme(settings.theme);
         setSidebarCollapsed(settings.sidebar === 'collapsed');

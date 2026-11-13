@@ -141,14 +141,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                         </select>
                         <p class="setting-help-text" id="help-sidebar" data-setting-help-text hidden>Controla si el sidebar inicia mostrando los nombres de las opciones o únicamente sus iconos.</p>
                     </div>
-                    <div class="setting-field">
-                        <div class="setting-label-row"><label for="setting-assistant-mode">Modo inicial del asistente</label><button class="setting-help" type="button" data-setting-help="help-assistant-mode" data-help-text="Define si el asistente se abre como panel flotante o integrado." aria-controls="help-assistant-mode" aria-expanded="false" aria-label="Ayuda sobre el modo del asistente">?</button></div>
-                        <select id="setting-assistant-mode" name="assistantMode" data-setting-assistant-mode>
-                            <option value="floating">Flotante</option>
-                            <option value="embedded">Integrado</option>
-                        </select>
-                        <p class="setting-help-text" id="help-assistant-mode" data-setting-help-text hidden>Define cómo aparece el asistente al abrirlo: como panel sobre el dashboard o integrado dentro del área principal.</p>
-                    </div>
                     <p class="settings-form__note">Estas preferencias se guardan en este navegador. El tono y las instrucciones permanentes del agente se agregarán cuando exista su configuración del lado servidor.</p>
                     <button class="settings-form__save" type="submit">Guardar ajustes</button>
                     <span class="settings-form__status" data-settings-status role="status" aria-live="polite"></span>

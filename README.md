@@ -58,8 +58,8 @@ interfaz solo expone controles con funcionalidad implementada: Asistente de IA, 
 abrir el asistente desde el dashboard, colapsar el menú, cambiar entre modo
 flotante/integrado, maximizar, abrir pop-out, minimizar, cerrar y cerrar sesión. La
 sección Perfil muestra los datos de la cuenta autenticada; la edición de datos queda
-fuera de esta etapa. Ajustes permite guardar en el navegador el tema, el estado inicial
-del sidebar y el modo inicial del asistente. Las secciones futuras no
+fuera de esta etapa. Ajustes permite guardar en el navegador el tema y el estado inicial
+del sidebar. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
 Cada opción de Ajustes incluye ayuda contextual accesible mediante un icono `?`; las
