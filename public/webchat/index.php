@@ -98,7 +98,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         </aside>
         <section class="dashboard-main" aria-label="Contenido del dashboard">
             <header class="dashboard-topbar">
-                <img class="dashboard-topbar__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
+                <span class="dashboard-topbar__title">IAAMXORG</span>
             </header>
             <div class="dashboard-background" aria-hidden="true"></div>
         </section>
@@ -113,7 +113,10 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
 
     <aside class="chat-panel" id="assistant-panel" hidden aria-label="Asistente de IA">
         <header class="chat-header">
-            <strong class="chat-header__title">Asistente de IA</strong>
+            <strong class="chat-header__title">
+                <img class="chat-header__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
+                <span class="sr-only">Asistente de IA</span>
+            </strong>
             <div class="chat-header__actions">
                 <button class="icon-button" type="button" data-chat-embed aria-label="Integrar asistente de IA" title="Integrar asistente de IA">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V8h3M16 8h3v3M19 13v3h-3M11 16H8v-3" /></svg>
