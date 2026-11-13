@@ -77,7 +77,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
         <aside class="dashboard-sidebar" data-sidebar>
             <div class="sidebar-brand">
-                <span class="sidebar-brand__mark">IAA<span>M</span>X</span>
+                <img class="sidebar-brand__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
                 <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menú" aria-expanded="true">
                     <span aria-hidden="true">‹</span>
                 </button>
@@ -98,7 +98,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         </aside>
         <section class="dashboard-main" aria-label="Contenido del dashboard">
             <header class="dashboard-topbar">
-                <span class="dashboard-topbar__title">IAAMXORG</span>
+                <img class="dashboard-topbar__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
             </header>
             <div class="dashboard-background" aria-hidden="true"></div>
         </section>

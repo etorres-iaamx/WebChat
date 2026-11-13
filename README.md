@@ -65,6 +65,9 @@ independiente. El modo pop-out desactiva temporalmente la ventana origen y la re
 cuando la ventana secundaria se cierra. Las acciones rápidas actuales son generales;
 las acciones específicas por módulo se agregarán cuando esos módulos existan.
 
+La identidad visual usa el logo oficial `iaa-mx-pleno-claro.svg` y el fondo
+`background-iaamx.jpg`, tomados del repositorio `julianflores/iaaorgmx`.
+
 ## Arquitectura
 
 ```text

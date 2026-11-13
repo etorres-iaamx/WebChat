@@ -8,7 +8,7 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
 <body>
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="title">
-    <div class="brand">IAAMX</div>
+    <img class="brand" src="./brand/iaa-mx-pleno-claro.svg" alt="IAA MX">
     <p class="eyebrow">WebChat</p>
     <h1 id="title"><?= $auth ? 'Tu cuenta está activa' : 'Inicia sesión o regístrate' ?></h1>
     <?php if ($auth): ?>
