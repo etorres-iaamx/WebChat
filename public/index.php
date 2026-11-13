@@ -2,6 +2,10 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
+if ($auth !== null) {
+    header('Location: ./webchat/index.php');
+    exit;
+}
 ?><!doctype html>
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="./auth.css"></head>
@@ -10,27 +14,7 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
   <section class="auth-card" aria-labelledby="title">
     <img class="brand" src="./brand/iaa-mx-pleno-claro.svg" alt="IAA MX">
     <p class="eyebrow">WebChat</p>
-    <h1 id="title"><?= $auth ? 'Tu cuenta está activa' : 'Inicia sesión o regístrate' ?></h1>
-    <?php if ($auth): ?>
-      <p>Hola, <?= htmlspecialchars((string) $auth['name'], ENT_QUOTES, 'UTF-8') ?>. Tu agente está asociado a tu cuenta.</p>
-      <a class="button" href="./webchat/index.php">Abrir WebChat</a>
-      <button class="button button--secondary" data-action="logout">Cerrar sesión</button>
-      <section class="pairing-card" aria-labelledby="pairing-title">
-        <h2 id="pairing-title">Vincular un canal</h2>
-        <p>Genera un código para tu identidad de Telegram o WhatsApp y confírmalo después.</p>
-        <form data-form="pairing-start">
-          <label>Canal<select name="channel"><option value="telegram">Telegram</option><option value="whatsapp">WhatsApp</option></select></label>
-          <label>Identidad externa<input name="external_identity" placeholder="ID de Telegram o número de WhatsApp" required></label>
-          <button class="button" type="submit">Generar código</button>
-        </form>
-        <form data-form="pairing-confirm" hidden>
-          <input type="hidden" name="pairing_id">
-          <label>Código de pairing<input name="challenge" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
-          <button class="button" type="submit">Confirmar vinculación</button>
-        </form>
-        <p class="status" data-pairing-status role="status"></p>
-      </section>
-    <?php else: ?>
+    <h1 id="title">Inicia sesión o regístrate</h1>
       <div class="tabs"><button class="tab is-active" data-tab="login">Iniciar sesión</button><button class="tab" data-tab="register">Crear cuenta</button></div>
       <form data-form="login">
         <label>Correo<input name="email" type="email" autocomplete="email" required></label>
@@ -74,7 +58,6 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
         <input type="hidden" name="email"><label>Código<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
         <button class="button" type="submit">Verificar correo</button>
       </form>
-    <?php endif; ?>
     <p class="status" data-status role="status"></p>
   </section>
 </main>

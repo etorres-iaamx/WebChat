@@ -62,6 +62,10 @@ fuera de esta etapa. Ajustes permite guardar en el navegador el tema y el estado
 del sidebar. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
+La ruta pública `/webchat/` es únicamente la pantalla de inicio de sesión y registro.
+Después de autenticar, redirige directamente al dashboard protegido en
+`/webchat/webchat/index.php`; no existe una segunda interfaz de cuenta en la raíz.
+
 Perfil reserva opciones para foto de perfil, cambio de contraseña y vinculación de
 Telegram/WhatsApp. Actualmente se muestran deshabilitadas como “Próximamente”; no
 simulan operaciones ni crean endpoints hasta implementar sus servicios.
