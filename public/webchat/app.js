@@ -457,7 +457,7 @@
         try {
             await fetch('../api.php?action=logout', { method: 'POST', credentials: 'same-origin' });
         } finally {
-            window.location.href = '../index.php';
+            window.location.href = '/webchat/';
         }
     }
 

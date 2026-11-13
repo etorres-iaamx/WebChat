@@ -10,7 +10,7 @@ $config = webchat_config();
 $authToken = (string) ($_COOKIE['webchat_auth'] ?? '');
 $authUser = webchat_auth()->userFromSession($authToken, true);
 if ($authUser === null) {
-    header('Location: ../index.php');
+    header('Location: /webchat/');
     exit;
 }
 $authUserId = (int) ($authUser['_database_id'] ?? 0);
@@ -70,6 +70,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light">
+    <base href="./webchat/">
     <title>IAAMXORG · Panel de control</title>
     <link rel="stylesheet" href="./styles.css?v=20261113-1533">
 </head>

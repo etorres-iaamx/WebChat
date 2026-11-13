@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
 if ($auth !== null) {
-    header('Location: ./webchat/index.php');
+    header('Location: ./dashboard');
     exit;
 }
 ?><!doctype html>

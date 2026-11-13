@@ -1,10 +1,19 @@
 {
-    auto_https off
+	auto_https off
 }
 
 :8080 {
-    @webchat_ws path /webchat/ws
-    reverse_proxy @webchat_ws 127.0.0.1:8081
+	@webchat_ws path /webchat/ws
+	reverse_proxy @webchat_ws 127.0.0.1:8081
 
-    reverse_proxy 127.0.0.1:8082
+	@webchat_legacy path /webchat/webchat/index.php
+	redir @webchat_legacy /webchat/dashboard 302
+
+	@webchat_dashboard path /webchat/dashboard
+	handle @webchat_dashboard {
+		rewrite * /webchat/index.php
+		reverse_proxy 127.0.0.1:8082
+	}
+
+	reverse_proxy 127.0.0.1:8082
 }

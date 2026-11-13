@@ -18,7 +18,7 @@
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
-  forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = './webchat/index.php'; } catch (error) { setStatus(error.message, true); } });
+  forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = './dashboard'; } catch (error) { setStatus(error.message, true); } });
   forms.register?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (registrationStarted) return;

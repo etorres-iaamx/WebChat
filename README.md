@@ -64,7 +64,8 @@ se muestran hasta contar con backend y navegación reales.
 
 La ruta pública `/webchat/` es únicamente la pantalla de inicio de sesión y registro.
 Después de autenticar, redirige directamente al dashboard protegido en
-`/webchat/webchat/index.php`; no existe una segunda interfaz de cuenta en la raíz.
+`/webchat/dashboard`. La ruta técnica anterior `/webchat/webchat/index.php` se conserva
+solo como redirección de compatibilidad; no es una URL canónica.
 
 Perfil reserva opciones para foto de perfil, cambio de contraseña y vinculación de
 Telegram/WhatsApp. Actualmente se muestran deshabilitadas como “Próximamente”; no
