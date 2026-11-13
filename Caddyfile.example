@@ -16,9 +16,25 @@
 		respond 404
 	}
 
+	@webchat_internal_auth path /webchat/auth.php
+	handle @webchat_internal_auth {
+		respond 404
+	}
+
+	@webchat_internal_dashboard path /webchat/dashboard.php
+	handle @webchat_internal_dashboard {
+		respond 404
+	}
+
 	@webchat_dashboard path /webchat/dashboard
 	handle @webchat_dashboard {
-		rewrite * /webchat/index.php
+		rewrite * /dashboard.php
+		reverse_proxy 127.0.0.1:8082
+	}
+
+	@webchat_root path /webchat /webchat/
+	handle @webchat_root {
+		rewrite * /auth.php
 		reverse_proxy 127.0.0.1:8082
 	}
 

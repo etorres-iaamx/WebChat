@@ -138,7 +138,9 @@ php -S 127.0.0.1:8082 -t public
 php bin/webchat-ws.php
 ```
 
-La pantalla local queda en `http://127.0.0.1:8082/webchat/index.php`. Si se accede directamente sin Caddy, usa `WEBCHAT_PUBLIC_WS_URL=ws://127.0.0.1:8081/webchat/ws`.
+La pantalla se publica mediante Caddy en `http://127.0.0.1:8080/webchat/`; las entradas
+internas `auth.php` y `dashboard.php` no deben abrirse directamente. Si se accede al
+entorno local, usa `WEBCHAT_PUBLIC_WS_URL=ws://127.0.0.1:8081/webchat/ws`.
 
 ## MariaDB
 
@@ -170,7 +172,7 @@ El relay usa el protocolo WebSocket v4 del Gateway:
 3. envía `chat.send` con `deliver=false`;
 4. relays los eventos `chat` (`status`, `delta`, `final`, `error`) al navegador.
 
-Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y `OPENCLAW_AGENT_ID` en `.env`. No coloques el token en `app.js`, HTML, el navegador ni el repositorio.
+Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y `OPENCLAW_AGENT_ID` en `.env`. No coloques el token en `dashboard.js`, HTML, el navegador ni el repositorio.
 
 ## Publicación en ngrok
 
@@ -197,7 +199,7 @@ Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y `OPENCLAW_AGENT_ID`
 
 4. Abre:
 
-   `https://your-subdomain.ngrok.io/webchat/index.php`
+   `https://your-subdomain.ngrok.io/webchat/`
 
 Caddy conserva la actualización WebSocket en `/webchat/ws`; las rutas HTTP se sirven desde el proceso PHP integrado. Si tu cuenta de ngrok no permite `--domain`, usa el hostname asignado y actualiza las dos variables de origen/URL.
 

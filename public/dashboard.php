@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/config/bootstrap.php';
+require dirname(__DIR__) . '/config/bootstrap.php';
 
 use Webchat\App\Token;
 
@@ -70,15 +70,14 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light">
-    <base href="./webchat/">
     <title>IAAMXORG · Panel de control</title>
-    <link rel="stylesheet" href="./styles.css?v=20261113-1533">
+    <link rel="stylesheet" href="/webchat/dashboard.css?v=20261113-1533">
 </head>
 <body>
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
         <aside class="dashboard-sidebar" data-sidebar>
             <div class="sidebar-brand">
-                <img class="sidebar-brand__logo" src="./assets/iaa-mx-pleno-oscuro.svg" alt="IAA MX">
+                <img class="sidebar-brand__logo" src="/webchat/assets/iaa-mx-pleno-oscuro.svg" alt="IAA MX">
                 <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menú" aria-expanded="true">
                     <span aria-hidden="true">‹</span>
                 </button>
@@ -183,7 +182,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <aside class="chat-panel" id="assistant-panel" hidden aria-label="Asistente de IA">
         <header class="chat-header">
             <strong class="chat-header__title">
-                <img class="chat-header__logo" src="./assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
+                <img class="chat-header__logo" src="/webchat/assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
                 <span class="sr-only">Asistente de IA</span>
             </strong>
             <div class="chat-header__actions">
@@ -244,6 +243,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         window.IAAMX_WEBCHAT = <?= $clientConfig ?>;
         window.IAAMX_HISTORY = <?= $historyJson ?>;
     </script>
-    <script src="./app.js" defer></script>
+    <script src="/webchat/dashboard.js" defer></script>
 </body>
 </html>

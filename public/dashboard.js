@@ -455,7 +455,7 @@
     async function logout() {
         logoutButton?.setAttribute('disabled', 'disabled');
         try {
-            await fetch('../api.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+            await fetch('/webchat/api.php?action=logout', { method: 'POST', credentials: 'same-origin' });
         } finally {
             window.location.href = '/webchat/';
         }
