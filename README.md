@@ -18,9 +18,8 @@ Implementado en esta primera entrega:
 - WebChat protegido: una persona no autenticada no puede abrir el chat.
 - Provisioning real de OpenClaw preparado mediante `openclaw agents add`; se habilita con `OPENCLAW_PROVISIONING_ENABLED=1`.
 
-Pendiente de la siguiente iteración: eliminar las tablas legacy del relay y hacer que
-el historial sea exclusivamente el de OpenClaw; implementar webhooks/adaptadores de
-Telegram y WhatsApp con sus identidades externas y pairing real.
+El historial es exclusivamente el de OpenClaw; `relay_requests` conserva únicamente
+correlación técnica. Telegram y WhatsApp usan identidades externas y pairing.
 
 ## Siguiente bloque implementado
 
@@ -67,7 +66,7 @@ ngrok → Caddy :8080
                                       └── MariaDB
 ```
 
-El navegador recibe únicamente un token firmado y de duración limitada para la sesión. La credencial del Gateway solo se lee en el proceso PHP del relay. Cada visitante tiene una conversación y una clave de sesión OpenClaw dedicada (`agent:main:webchat-iaamx:<id>`).
+El navegador recibe únicamente un token firmado y de duración limitada para la sesión. La credencial del Gateway solo se lee en el proceso PHP del relay. Cada usuario autenticado tiene una conversación y una clave de sesión OpenClaw dedicada (`agent:main:webchat-iaamx:<id>`).
 
 ## Requisitos
 
@@ -163,7 +162,7 @@ Caddy conserva la actualización WebSocket en `/webchat/ws`; las rutas HTTP se s
 
 ## Seguridad y límites del MVP
 
-- Cookie de visitante `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS.
+- Cookie de autenticación `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS.
 - Tokens relay firmados con HMAC y expiración.
 - Lista de orígenes WebSocket configurable.
 - Límite de mensaje configurable y `request_id` idempotente por conversación.

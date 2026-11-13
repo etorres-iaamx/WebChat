@@ -46,7 +46,6 @@ final class Config
             'WEBCHAT_TOKEN_TTL' => '3600',
             'WEBCHAT_SESSION_TTL' => '2592000',
             'WEBCHAT_MAX_MESSAGE_LENGTH' => '4000',
-            'WEBCHAT_VISITOR_NAME' => 'Visitante IAAMX',
             'WEBCHAT_PUBLIC_BASE_URL' => '',
             'AUTH_SESSION_TTL' => '2592000',
             'AUTH_SESSION_TTL_SHORT' => '43200',

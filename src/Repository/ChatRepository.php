@@ -18,62 +18,6 @@ final class ChatRepository
     {
     }
 
-    /** @return array<string, mixed> */
-    public function createOrRefreshVisitorSession(string $rawToken, Config $config): array
-    {
-        $tokenHash = Token::hash($rawToken);
-        $existing = $this->findSessionByTokenHash($tokenHash);
-        if ($existing !== null) {
-            $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $config->int('WEBCHAT_SESSION_TTL', 2592000) . ' seconds')->format('Y-m-d H:i:s.u');
-            $this->database->pdo()->prepare('UPDATE web_sessions SET last_seen_at = UTC_TIMESTAMP(6), expires_at = :expires_at WHERE id = :id')
-                ->execute(['expires_at' => $expiresAt, 'id' => $existing['id']]);
-            $existing['expires_at'] = $expiresAt;
-            return $existing;
-        }
-
-        return $this->database->transaction(function (PDO $pdo) use ($tokenHash, $config): array {
-            $sessionPublicId = Uuid::v4();
-            $conversationPublicId = Uuid::v4();
-            $userPublicId = Uuid::v4();
-            $gatewaySessionKey = $config->gatewaySessionKey($sessionPublicId);
-            $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $config->int('WEBCHAT_SESSION_TTL', 2592000) . ' seconds')->format('Y-m-d H:i:s.u');
-
-            $pdo->prepare('INSERT INTO users (public_id, display_name) VALUES (:public_id, :display_name)')
-                ->execute(['public_id' => $userPublicId, 'display_name' => (string) $config->get('WEBCHAT_VISITOR_NAME', 'Visitante IAAMX')]);
-            $userId = (int) $pdo->lastInsertId();
-
-            $pdo->prepare('INSERT INTO conversations (public_id, gateway_session_key, title) VALUES (:public_id, :gateway_session_key, :title)')
-                ->execute([
-                    'public_id' => $conversationPublicId,
-                    'gateway_session_key' => $gatewaySessionKey,
-                    'title' => 'Webchat IAAMX',
-                ]);
-            $conversationId = (int) $pdo->lastInsertId();
-
-            $pdo->prepare('INSERT INTO conversation_participants (conversation_id, user_id, role) VALUES (:conversation_id, :user_id, :role)')
-                ->execute(['conversation_id' => $conversationId, 'user_id' => $userId, 'role' => 'owner']);
-
-            $pdo->prepare('INSERT INTO web_sessions (public_id, token_hash, user_id, conversation_id, expires_at) VALUES (:public_id, :token_hash, :user_id, :conversation_id, :expires_at)')
-                ->execute([
-                    'public_id' => $sessionPublicId,
-                    'token_hash' => $tokenHash,
-                    'user_id' => $userId,
-                    'conversation_id' => $conversationId,
-                    'expires_at' => $expiresAt,
-                ]);
-
-            return [
-                'id' => (int) $pdo->lastInsertId(),
-                'public_id' => $sessionPublicId,
-                'user_id' => $userId,
-                'conversation_id' => $conversationId,
-                'conversation_public_id' => $conversationPublicId,
-                'gateway_session_key' => $gatewaySessionKey,
-                'user_public_id' => $userPublicId,
-            ];
-        });
-    }
-
     /** @return array<string,mixed> */
     public function createOrRefreshUserSession(string $rawToken, Config $config, int $userId): array
     {
