@@ -207,7 +207,6 @@
             socket = null;
             setTyping(false);
             setConnection('error', 'Desconectado');
-            void checkSession();
             if (!closedByUser && !panel.hidden) {
                 window.clearTimeout(reconnectTimer);
                 reconnectTimer = window.setTimeout(connect, 2500);
