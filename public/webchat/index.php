@@ -90,14 +90,29 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                 </div>
             </div>
             <nav class="sidebar-nav" aria-label="Navegación principal">
-                <p class="sidebar-section-title">Management</p>
-                <a class="sidebar-link is-active" href="#assistant" data-sidebar-assistant><span class="sidebar-link__icon" aria-hidden="true">✦</span><span>AI Assistant</span></a>
-                <p class="sidebar-section-title">Tools</p>
-                <button class="sidebar-link sidebar-link--button" type="button" data-action="logout"><span class="sidebar-link__icon" aria-hidden="true">⇥</span><span>Logout</span></button>
+                <p class="sidebar-section-title">Gestión</p>
+                <a class="sidebar-link is-active" href="#assistant" data-sidebar-assistant><span class="sidebar-link__icon" aria-hidden="true">✦</span><span>Asistente de IA</span></a>
+                <p class="sidebar-section-title">Cuenta</p>
+                <button class="sidebar-link sidebar-link--button" type="button" data-sidebar-profile aria-controls="profile-panel" aria-expanded="false"><span class="sidebar-link__icon" aria-hidden="true">◎</span><span>Perfil</span></button>
+                <p class="sidebar-section-title">Sesión</p>
+                <button class="sidebar-link sidebar-link--button" type="button" data-action="logout"><span class="sidebar-link__icon" aria-hidden="true">⇥</span><span>Cerrar sesión</span></button>
             </nav>
         </aside>
         <section class="dashboard-main" aria-label="Contenido del dashboard">
             <div class="dashboard-background" aria-hidden="true"></div>
+            <section class="profile-panel" id="profile-panel" data-profile-panel hidden aria-labelledby="profile-title">
+                <div class="profile-panel__header">
+                    <div>
+                        <p class="profile-panel__eyebrow">Cuenta</p>
+                        <h1 id="profile-title">Perfil</h1>
+                    </div>
+                    <button class="profile-panel__close" type="button" data-profile-close aria-label="Cerrar perfil">×</button>
+                </div>
+                <dl class="profile-panel__details">
+                    <div><dt>Nombre</dt><dd><?= webchat_h((string) $authUser['name']) ?></dd></div>
+                    <div><dt>Correo electrónico</dt><dd><?= webchat_h((string) $authUser['email']) ?></dd></div>
+                </dl>
+            </section>
         </section>
     </main>
 

@@ -81,6 +81,17 @@ button { cursor: pointer; touch-action: manipulation; }
 .dashboard-main { position: relative; min-width: 0; flex: 1; overflow: hidden; }
 .dashboard-main .dashboard-background { inset: 0; }
 
+.profile-panel { position: absolute; top: 28px; left: 28px; z-index: 4; width: min(390px, calc(100% - 56px)); padding: 24px; border: 1px solid rgba(255, 255, 255, .72); border-radius: 16px; color: #20232b; background: rgba(255, 255, 255, .94); box-shadow: var(--shadow); backdrop-filter: blur(8px); }
+.profile-panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.profile-panel__eyebrow { margin: 0 0 4px; color: #69717e; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.profile-panel h1 { margin: 0; font-size: 25px; }
+.profile-panel__close { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; color: #4a5670; background: #edf0f3; font-size: 22px; line-height: 1; }
+.profile-panel__close:hover { color: #fff; background: #344056; }
+.profile-panel__details { display: grid; gap: 16px; margin: 24px 0 0; }
+.profile-panel__details div { display: grid; gap: 4px; }
+.profile-panel__details dt { color: #69717e; font-size: 12px; font-weight: 700; }
+.profile-panel__details dd { margin: 0; overflow-wrap: anywhere; font-size: 15px; }
+
 .dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar { width: 70px; min-width: 70px; }
 .dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; padding: 0; }
 .dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand__logo { width: 34px; object-fit: cover; object-position: left center; }
@@ -230,6 +241,7 @@ button { cursor: pointer; touch-action: manipulation; }
         background-position: center center;
         background-size: cover;
     }
+    .profile-panel { top: 18px; left: 18px; width: calc(100% - 36px); }
     .chat-launcher {
         right: calc(18px + env(safe-area-inset-right));
         bottom: calc(18px + env(safe-area-inset-bottom));

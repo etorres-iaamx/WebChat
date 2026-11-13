@@ -22,6 +22,9 @@
     const dashboardShell = document.querySelector('.dashboard-shell');
     const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
     const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
+    const sidebarProfile = document.querySelector('[data-sidebar-profile]');
+    const profilePanel = document.querySelector('[data-profile-panel]');
+    const profileClose = document.querySelector('[data-profile-close]');
     const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
     const query = new URLSearchParams(window.location.search);
@@ -351,6 +354,26 @@
         try { window.localStorage.setItem('iaamx-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_) { /* storage is optional */ }
     }
 
+    function setActiveSidebarItem(item) {
+        document.querySelectorAll('[data-sidebar-assistant], [data-sidebar-profile]').forEach((link) => {
+            link.classList.toggle('is-active', link === item);
+        });
+    }
+
+    function hideProfile() {
+        if (!profilePanel) return;
+        profilePanel.hidden = true;
+        sidebarProfile?.setAttribute('aria-expanded', 'false');
+    }
+
+    function showProfile() {
+        if (!profilePanel) return;
+        hidePanel();
+        profilePanel.hidden = false;
+        sidebarProfile?.setAttribute('aria-expanded', 'true');
+        setActiveSidebarItem(sidebarProfile);
+    }
+
     function toggleMaximized() {
         setChatMode(panel.dataset.chatMode === 'maximized' ? lastNonMaximizedMode : 'maximized');
     }
@@ -396,7 +419,9 @@
 
     launcher?.addEventListener('click', showPanel);
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
-    sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); showPanel(); });
+    sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); hideProfile(); setActiveSidebarItem(sidebarAssistant); showPanel(); });
+    sidebarProfile?.addEventListener('click', showProfile);
+    profileClose?.addEventListener('click', () => { hideProfile(); setActiveSidebarItem(sidebarAssistant); });
     embedButton?.addEventListener('click', toggleEmbedded);
     maximizeButton?.addEventListener('click', toggleMaximized);
     popoutButton?.addEventListener('click', openPopout);
