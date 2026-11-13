@@ -94,6 +94,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                 <a class="sidebar-link is-active" href="#assistant" data-sidebar-assistant><span class="sidebar-link__icon" aria-hidden="true">✦</span><span>Asistente de IA</span></a>
                 <p class="sidebar-section-title">Cuenta</p>
                 <button class="sidebar-link sidebar-link--button" type="button" data-sidebar-profile aria-controls="profile-panel" aria-expanded="false"><span class="sidebar-link__icon" aria-hidden="true">◎</span><span>Perfil</span></button>
+                <button class="sidebar-link sidebar-link--button" type="button" data-sidebar-settings aria-controls="settings-panel" aria-expanded="false"><span class="sidebar-link__icon" aria-hidden="true">⚙</span><span>Ajustes</span></button>
                 <p class="sidebar-section-title">Sesión</p>
                 <button class="sidebar-link sidebar-link--button" type="button" data-action="logout"><span class="sidebar-link__icon" aria-hidden="true">⇥</span><span>Cerrar sesión</span></button>
             </nav>
@@ -111,7 +112,41 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                 <dl class="profile-panel__details">
                     <div><dt>Nombre</dt><dd><?= webchat_h((string) $authUser['name']) ?></dd></div>
                     <div><dt>Correo electrónico</dt><dd><?= webchat_h((string) $authUser['email']) ?></dd></div>
+                    <div><dt>Estado</dt><dd>Cuenta activa</dd></div>
                 </dl>
+            </section>
+            <section class="settings-panel" id="settings-panel" data-settings-panel hidden aria-labelledby="settings-title">
+                <div class="profile-panel__header">
+                    <div>
+                        <p class="profile-panel__eyebrow">Preferencias</p>
+                        <h1 id="settings-title">Ajustes</h1>
+                    </div>
+                    <button class="profile-panel__close" type="button" data-settings-close aria-label="Cerrar ajustes">×</button>
+                </div>
+                <form class="settings-form" data-settings-form>
+                    <label>Tema de la interfaz
+                        <select name="theme" data-setting-theme>
+                            <option value="system">Usar configuración del dispositivo</option>
+                            <option value="light">Claro</option>
+                            <option value="dark">Oscuro</option>
+                        </select>
+                    </label>
+                    <label>Estado inicial del menú
+                        <select name="sidebar" data-setting-sidebar>
+                            <option value="expanded">Expandido</option>
+                            <option value="collapsed">Colapsado</option>
+                        </select>
+                    </label>
+                    <label>Modo inicial del asistente
+                        <select name="assistantMode" data-setting-assistant-mode>
+                            <option value="floating">Flotante</option>
+                            <option value="embedded">Integrado</option>
+                        </select>
+                    </label>
+                    <p class="settings-form__note">Estas preferencias se guardan en este navegador. El tono y las instrucciones permanentes del agente se agregarán cuando exista su configuración del lado servidor.</p>
+                    <button class="settings-form__save" type="submit">Guardar ajustes</button>
+                    <span class="settings-form__status" data-settings-status role="status" aria-live="polite"></span>
+                </form>
             </section>
         </section>
     </main>

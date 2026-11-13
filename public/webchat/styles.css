@@ -91,6 +91,21 @@ button { cursor: pointer; touch-action: manipulation; }
 .profile-panel__details div { display: grid; gap: 4px; }
 .profile-panel__details dt { color: #69717e; font-size: 12px; font-weight: 700; }
 .profile-panel__details dd { margin: 0; overflow-wrap: anywhere; font-size: 15px; }
+.settings-panel { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; padding: 32px 40px; color: #20232b; background: rgba(255, 255, 255, .94); backdrop-filter: blur(8px); }
+.settings-form { display: grid; gap: 18px; max-width: 620px; margin-top: 32px; }
+.settings-form label { display: grid; gap: 7px; color: #4a5670; font-size: 13px; font-weight: 700; }
+.settings-form select { min-height: 42px; padding: 0 12px; border: 1px solid #d7dce3; border-radius: 8px; color: #20232b; background: #fff; font: inherit; }
+.settings-form__note { margin: 0; color: #69717e; font-size: 12px; line-height: 1.5; }
+.settings-form__save { width: fit-content; min-height: 40px; padding: 0 18px; border: 0; border-radius: 8px; color: #fff; background: #273142; font-weight: 700; }
+.settings-form__save:hover { background: #344056; }
+.settings-form__status { min-height: 18px; color: #4d6b55; font-size: 12px; }
+body[data-theme="dark"] .profile-panel,
+body[data-theme="dark"] .settings-panel { color: #edf1f6; background: rgba(31, 39, 52, .96); }
+body[data-theme="dark"] .profile-panel__details dt,
+body[data-theme="dark"] .settings-form label,
+body[data-theme="dark"] .settings-form__note { color: #b8c0cc; }
+body[data-theme="dark"] .profile-panel__details dd { color: #fff; }
+body[data-theme="dark"] .settings-form select { border-color: #566174; color: #edf1f6; background: #273142; }
 
 .dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar { width: 70px; min-width: 70px; }
 .dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; padding: 0; }
@@ -243,6 +258,8 @@ button { cursor: pointer; touch-action: manipulation; }
     }
     .profile-panel { padding: 24px 18px; }
     .profile-panel__header { margin: -24px -18px 0; padding-inline: 18px; }
+    .settings-panel { padding: 24px 18px; }
+    .settings-panel .profile-panel__header { margin: -24px -18px 0; padding-inline: 18px; }
     .chat-launcher {
         right: calc(18px + env(safe-area-inset-right));
         bottom: calc(18px + env(safe-area-inset-bottom));

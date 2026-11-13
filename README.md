@@ -54,11 +54,12 @@ y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-200/201/202/203/204:
 dashboard con barra lateral, fondo de oficina y asistente contextual. El perfil del
 usuario se muestra en la barra lateral para mantener despejada el área central. En esta etapa la
-interfaz solo expone controles con funcionalidad implementada: Asistente de IA, Perfil,
+interfaz solo expone controles con funcionalidad implementada: Asistente de IA, Perfil y Ajustes,
 abrir el asistente desde el dashboard, colapsar el menú, cambiar entre modo
 flotante/integrado, maximizar, abrir pop-out, minimizar, cerrar y cerrar sesión. La
 sección Perfil muestra los datos de la cuenta autenticada; la edición de datos queda
-fuera de esta etapa. Las secciones futuras no
+fuera de esta etapa. Ajustes permite guardar en el navegador el tema, el estado inicial
+del sidebar y el modo inicial del asistente. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
 El asistente conserva una única conversación mientras cambia de presentación: puede

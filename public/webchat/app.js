@@ -23,8 +23,16 @@
     const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
     const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
     const sidebarProfile = document.querySelector('[data-sidebar-profile]');
+    const sidebarSettings = document.querySelector('[data-sidebar-settings]');
     const profilePanel = document.querySelector('[data-profile-panel]');
     const profileClose = document.querySelector('[data-profile-close]');
+    const settingsPanel = document.querySelector('[data-settings-panel]');
+    const settingsClose = document.querySelector('[data-settings-close]');
+    const settingsForm = document.querySelector('[data-settings-form]');
+    const settingsTheme = document.querySelector('[data-setting-theme]');
+    const settingsSidebar = document.querySelector('[data-setting-sidebar]');
+    const settingsAssistantMode = document.querySelector('[data-setting-assistant-mode]');
+    const settingsStatus = document.querySelector('[data-settings-status]');
     const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
     const query = new URLSearchParams(window.location.search);
@@ -355,7 +363,7 @@
     }
 
     function setActiveSidebarItem(item) {
-        document.querySelectorAll('[data-sidebar-assistant], [data-sidebar-profile]').forEach((link) => {
+        document.querySelectorAll('[data-sidebar-assistant], [data-sidebar-profile], [data-sidebar-settings]').forEach((link) => {
             link.classList.toggle('is-active', link === item);
         });
     }
@@ -366,12 +374,50 @@
         sidebarProfile?.setAttribute('aria-expanded', 'false');
     }
 
+    function hideSettings() {
+        if (!settingsPanel) return;
+        settingsPanel.hidden = true;
+        sidebarSettings?.setAttribute('aria-expanded', 'false');
+    }
+
     function showProfile() {
         if (!profilePanel) return;
         hidePanel();
+        hideSettings();
         profilePanel.hidden = false;
         sidebarProfile?.setAttribute('aria-expanded', 'true');
         setActiveSidebarItem(sidebarProfile);
+    }
+
+    function applyTheme(theme) {
+        document.body.dataset.theme = theme === 'dark' || theme === 'light' ? theme : 'system';
+    }
+
+    function storedSettings() {
+        try {
+            return JSON.parse(window.localStorage.getItem('iaamx-settings') || '{}');
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function applyStoredSettings() {
+        const settings = storedSettings();
+        applyTheme(settings.theme || 'system');
+        if (settingsSidebar) settingsSidebar.value = settings.sidebar === 'collapsed' ? 'collapsed' : 'expanded';
+        if (settingsTheme) settingsTheme.value = ['system', 'light', 'dark'].includes(settings.theme) ? settings.theme : 'system';
+        if (settingsAssistantMode) settingsAssistantMode.value = settings.assistantMode === 'embedded' ? 'embedded' : 'floating';
+        if (settings.sidebar === 'collapsed') setSidebarCollapsed(true);
+    }
+
+    function showSettings() {
+        if (!settingsPanel) return;
+        hidePanel();
+        hideProfile();
+        applyStoredSettings();
+        settingsPanel.hidden = false;
+        sidebarSettings?.setAttribute('aria-expanded', 'true');
+        setActiveSidebarItem(sidebarSettings);
     }
 
     function toggleMaximized() {
@@ -417,11 +463,21 @@
         }
     }
 
-    launcher?.addEventListener('click', showPanel);
+    launcher?.addEventListener('click', () => showPanel(storedSettings().assistantMode === 'embedded' ? 'embedded' : 'floating'));
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
     sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); hideProfile(); setActiveSidebarItem(sidebarAssistant); showPanel(); });
     sidebarProfile?.addEventListener('click', showProfile);
     profileClose?.addEventListener('click', () => { hideProfile(); setActiveSidebarItem(sidebarAssistant); });
+    sidebarSettings?.addEventListener('click', showSettings);
+    settingsClose?.addEventListener('click', () => { hideSettings(); setActiveSidebarItem(sidebarAssistant); });
+    settingsForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const settings = { theme: settingsTheme?.value || 'system', sidebar: settingsSidebar?.value || 'expanded', assistantMode: settingsAssistantMode?.value || 'floating' };
+        try { window.localStorage.setItem('iaamx-settings', JSON.stringify(settings)); } catch (_) { /* storage is optional */ }
+        applyTheme(settings.theme);
+        setSidebarCollapsed(settings.sidebar === 'collapsed');
+        if (settingsStatus) settingsStatus.textContent = 'Ajustes guardados en este navegador.';
+    });
     embedButton?.addEventListener('click', toggleEmbedded);
     maximizeButton?.addEventListener('click', toggleMaximized);
     popoutButton?.addEventListener('click', openPopout);
@@ -442,6 +498,7 @@
     let sidebarCollapsed = false;
     try { sidebarCollapsed = window.localStorage.getItem('iaamx-sidebar-collapsed') === '1'; } catch (_) { /* storage is optional */ }
     setSidebarCollapsed(sidebarCollapsed);
+    applyStoredSettings();
     setConnection('idle', 'Listo para ayudarte');
     setChatMode('floating');
 
