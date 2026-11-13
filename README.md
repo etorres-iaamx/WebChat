@@ -63,7 +63,9 @@ del sidebar y el modo inicial del asistente. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
 Cada opción de Ajustes incluye ayuda contextual accesible mediante un icono `?`; las
-explicaciones indican el efecto de la preferencia antes de guardarla.
+explicaciones indican el efecto de la preferencia antes de guardarla. El mismo texto
+aparece como tooltip al pasar el cursor o enfocar el icono, y como ayuda expandida al
+hacer clic.
 
 El asistente conserva una única conversación mientras cambia de presentación: puede
 flotar sobre el dashboard, integrarse en el área principal o abrirse en una ventana
@@ -74,6 +76,9 @@ las acciones específicas por módulo se agregarán cuando esos módulos existan
 La identidad visual usa el logo oficial `iaa-mx-pleno-claro.svg` sobre fondos claros,
 `iaa-mx-pleno-oscuro.svg` en el sidebar oscuro y el fondo `background-iaamx.jpg`,
 tomados del repositorio `julianflores/iaaorgmx`.
+Los estados del sidebar y los controles de ayuda usan los tokens oficiales del mismo
+repositorio (`#1e2436`, `#9e0511` y `#414a60`); la interfaz no mantiene una paleta
+alternativa para esos elementos.
 
 ## Arquitectura
 

@@ -125,7 +125,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                 </div>
                 <form class="settings-form" data-settings-form>
                     <div class="setting-field">
-                        <div class="setting-label-row"><label for="setting-theme">Tema de la interfaz</label><button class="setting-help" type="button" data-setting-help="help-theme" aria-controls="help-theme" aria-expanded="false" aria-label="Ayuda sobre el tema">?</button></div>
+                        <div class="setting-label-row"><label for="setting-theme">Tema de la interfaz</label><button class="setting-help" type="button" data-setting-help="help-theme" data-help-text="Cambia el contraste de la interfaz y puede seguir el tema del dispositivo." aria-controls="help-theme" aria-expanded="false" aria-label="Ayuda sobre el tema">?</button></div>
                         <select id="setting-theme" name="theme" data-setting-theme>
                             <option value="system">Usar configuración del dispositivo</option>
                             <option value="light">Claro</option>
@@ -134,7 +134,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                         <p class="setting-help-text" id="help-theme" data-setting-help-text hidden>Define el contraste de la interfaz de Ajustes. “Usar configuración del dispositivo” sigue el tema que tenga configurado tu navegador o sistema.</p>
                     </div>
                     <div class="setting-field">
-                        <div class="setting-label-row"><label for="setting-sidebar">Estado inicial del menú</label><button class="setting-help" type="button" data-setting-help="help-sidebar" aria-controls="help-sidebar" aria-expanded="false" aria-label="Ayuda sobre el estado del menú">?</button></div>
+                        <div class="setting-label-row"><label for="setting-sidebar">Estado inicial del menú</label><button class="setting-help" type="button" data-setting-help="help-sidebar" data-help-text="Define si el menú inicia mostrando los nombres o solo los iconos." aria-controls="help-sidebar" aria-expanded="false" aria-label="Ayuda sobre el estado del menú">?</button></div>
                         <select id="setting-sidebar" name="sidebar" data-setting-sidebar>
                             <option value="expanded">Expandido</option>
                             <option value="collapsed">Colapsado</option>
@@ -142,7 +142,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                         <p class="setting-help-text" id="help-sidebar" data-setting-help-text hidden>Controla si el sidebar inicia mostrando los nombres de las opciones o únicamente sus iconos.</p>
                     </div>
                     <div class="setting-field">
-                        <div class="setting-label-row"><label for="setting-assistant-mode">Modo inicial del asistente</label><button class="setting-help" type="button" data-setting-help="help-assistant-mode" aria-controls="help-assistant-mode" aria-expanded="false" aria-label="Ayuda sobre el modo del asistente">?</button></div>
+                        <div class="setting-label-row"><label for="setting-assistant-mode">Modo inicial del asistente</label><button class="setting-help" type="button" data-setting-help="help-assistant-mode" data-help-text="Define si el asistente se abre como panel flotante o integrado." aria-controls="help-assistant-mode" aria-expanded="false" aria-label="Ayuda sobre el modo del asistente">?</button></div>
                         <select id="setting-assistant-mode" name="assistantMode" data-setting-assistant-mode>
                             <option value="floating">Flotante</option>
                             <option value="embedded">Integrado</option>
