@@ -114,6 +114,29 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                     <div><dt>Correo electrónico</dt><dd><?= webchat_h((string) $authUser['email']) ?></dd></div>
                     <div><dt>Estado</dt><dd>Cuenta activa</dd></div>
                 </dl>
+                <div class="profile-panel__options" aria-label="Opciones de perfil">
+                    <h2>Personalización y acceso</h2>
+                    <button class="profile-option" type="button" disabled>
+                        <span class="profile-option__icon" aria-hidden="true">◉</span>
+                        <span><strong>Foto de perfil</strong><small>Próximamente · podrás cambiar tu avatar.</small></span>
+                        <span class="profile-option__status">Próximamente</span>
+                    </button>
+                    <button class="profile-option" type="button" disabled>
+                        <span class="profile-option__icon" aria-hidden="true">◆</span>
+                        <span><strong>Cambiar contraseña</strong><small>Próximamente · gestión segura de credenciales.</small></span>
+                        <span class="profile-option__status">Próximamente</span>
+                    </button>
+                    <button class="profile-option" type="button" disabled>
+                        <span class="profile-option__icon" aria-hidden="true">✈</span>
+                        <span><strong>Canal de Telegram</strong><small>Próximamente · vinculación con tu agente.</small></span>
+                        <span class="profile-option__status">Próximamente</span>
+                    </button>
+                    <button class="profile-option" type="button" disabled>
+                        <span class="profile-option__icon" aria-hidden="true">◌</span>
+                        <span><strong>Canal de WhatsApp</strong><small>Próximamente · vinculación con tu agente.</small></span>
+                        <span class="profile-option__status">Próximamente</span>
+                    </button>
+                </div>
             </section>
             <section class="settings-panel" id="settings-panel" data-settings-panel hidden aria-labelledby="settings-title">
                 <div class="profile-panel__header">

@@ -62,6 +62,10 @@ fuera de esta etapa. Ajustes permite guardar en el navegador el tema y el estado
 del sidebar. Las secciones futuras no
 se muestran hasta contar con backend y navegación reales.
 
+Perfil reserva opciones para foto de perfil, cambio de contraseña y vinculación de
+Telegram/WhatsApp. Actualmente se muestran deshabilitadas como “Próximamente”; no
+simulan operaciones ni crean endpoints hasta implementar sus servicios.
+
 Cada opción de Ajustes incluye ayuda contextual accesible mediante un icono `?`; las
 explicaciones indican el efecto de la preferencia antes de guardarla. El mismo texto
 aparece como tooltip al pasar el cursor o enfocar el icono, y como ayuda expandida al
