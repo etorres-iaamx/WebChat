@@ -167,8 +167,8 @@ final class AuthService
     {
         if ($token === '') return null;
         $tokenHash = Token::hash($token);
-        $statement = $this->database->pdo()->prepare('SELECT u.* FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND s.last_seen_at > :idle_cutoff AND u.status = \'active\' LIMIT 1');
-        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff()]);
+        $statement = $this->database->pdo()->prepare('SELECT u.* FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND ((s.persistent = 1 AND s.last_seen_at > :persistent_idle_cutoff) OR (s.persistent = 0 AND s.last_seen_at > :idle_cutoff)) AND u.status = \'active\' LIMIT 1');
+        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff(), 'persistent_idle_cutoff' => $this->persistentIdleCutoff()]);
         $user = $statement->fetch();
         if (is_array($user)) $this->touchSession($tokenHash);
         return is_array($user) ? $this->publicUser($user) : null;
@@ -178,8 +178,8 @@ final class AuthService
     {
         if ($token === '') return null;
         $tokenHash = Token::hash($token);
-        $statement = $this->database->pdo()->prepare('SELECT u.id FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND s.last_seen_at > :idle_cutoff AND u.status = \'active\' LIMIT 1');
-        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff()]);
+        $statement = $this->database->pdo()->prepare('SELECT u.id FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND ((s.persistent = 1 AND s.last_seen_at > :persistent_idle_cutoff) OR (s.persistent = 0 AND s.last_seen_at > :idle_cutoff)) AND u.status = \'active\' LIMIT 1');
+        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff(), 'persistent_idle_cutoff' => $this->persistentIdleCutoff()]);
         $id = $statement->fetchColumn();
         if ($id !== false) $this->touchSession($tokenHash);
         return $id === false ? null : (int) $id;
@@ -196,8 +196,8 @@ final class AuthService
         $token = Token::random(32);
         $ttl = $this->sessionTtl($persistent);
         $expires = gmdate('Y-m-d H:i:s', time() + $ttl);
-        $this->database->pdo()->prepare('INSERT INTO auth_sessions (public_id, user_id, token_hash, expires_at) VALUES (:public_id, :user_id, :token_hash, :expires_at)')
-            ->execute(['public_id' => Uuid::v4(), 'user_id' => $userId, 'token_hash' => Token::hash($token), 'expires_at' => $expires]);
+        $this->database->pdo()->prepare('INSERT INTO auth_sessions (public_id, user_id, token_hash, persistent, expires_at) VALUES (:public_id, :user_id, :token_hash, :persistent, :expires_at)')
+            ->execute(['public_id' => Uuid::v4(), 'user_id' => $userId, 'token_hash' => Token::hash($token), 'persistent' => $persistent ? 1 : 0, 'expires_at' => $expires]);
         return ['token' => $token, 'ttl' => $ttl];
     }
 
@@ -209,7 +209,16 @@ final class AuthService
 
     private function idleCutoff(): string
     {
-        $seconds = max(300, $this->config->int('AUTH_SESSION_IDLE_TTL', 43200));
+        return $this->cutoffForSeconds(max(300, $this->config->int('AUTH_SESSION_IDLE_TTL', 43200)));
+    }
+
+    private function persistentIdleCutoff(): string
+    {
+        return $this->cutoffForSeconds(max(300, $this->config->int('AUTH_SESSION_TTL_PERSISTENT', 2592000)));
+    }
+
+    private function cutoffForSeconds(int $seconds): string
+    {
         return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-' . $seconds . ' seconds')->format('Y-m-d H:i:s.u');
     }
 
