@@ -292,7 +292,10 @@ final class Connection
             throw new ConnectionClosed('WebSocket stream ended');
         }
         $chunk = fread($this->stream, 65536);
-        if ($chunk === false || ($chunk === '' && feof($this->stream))) {
+        // A readable non-blocking socket that yields an empty chunk has been
+        // closed by its peer. Treat it as EOF immediately; otherwise the relay
+        // can spin forever on a CLOSE-WAIT socket after the Gateway disconnects.
+        if ($chunk === false || $chunk === '' || feof($this->stream)) {
             throw new ConnectionClosed('WebSocket stream ended');
         }
         if ($chunk !== '') {
