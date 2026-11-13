@@ -32,7 +32,78 @@ button { cursor: pointer; touch-action: manipulation; }
     inset: 0;
 }
 
-.dashboard-shell { overflow: hidden; }
+.dashboard-shell { display: flex; overflow: hidden; }
+
+.dashboard-sidebar {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    width: 245px;
+    min-width: 245px;
+    flex-direction: column;
+    color: #d9dee7;
+    background: #273142;
+    transition: width 180ms ease, min-width 180ms ease;
+}
+
+.sidebar-brand {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, .13);
+}
+
+.sidebar-brand__mark { color: #fff; font-size: 28px; font-weight: 800; letter-spacing: -.08em; }
+.sidebar-brand__mark span { color: #f13b2b; }
+.sidebar-toggle { width: 28px; height: 28px; padding: 0; border: 0; color: #fff; background: transparent; font-size: 30px; line-height: 20px; }
+.sidebar-toggle:hover { color: #ffb5a8; }
+
+.sidebar-profile { display: flex; align-items: center; gap: 10px; min-height: 81px; padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, .13); }
+.sidebar-avatar { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; background: #8a7b7e; font-size: 13px; font-weight: 750; }
+.sidebar-profile__copy { display: grid; gap: 2px; min-width: 0; }
+.sidebar-profile__copy strong { color: #fff; font-size: 14px; }
+.sidebar-profile__copy span { color: #b8c0cc; font-size: 12px; }
+
+.sidebar-search { display: flex; align-items: center; gap: 6px; margin: 20px 7px 13px; padding: 0 9px; border: 1px solid #dce2ea; color: #eef2f7; }
+.sidebar-search input { width: 100%; min-height: 36px; padding: 0; border: 0; outline: 0; color: #fff; background: transparent; font-size: 13px; }
+.sidebar-search input::placeholder { color: #d3d9e1; }
+.sidebar-search span:last-child { font-size: 23px; line-height: 1; transform: rotate(-20deg); }
+
+.sidebar-nav { min-height: 0; overflow-y: auto; padding-bottom: 18px; scrollbar-width: thin; scrollbar-color: #566174 transparent; }
+.sidebar-section-title { margin: 9px 16px 6px; color: #8d96a5; font-size: 13px; }
+.sidebar-link { display: flex; min-height: 39px; align-items: center; gap: 11px; padding: 0 16px; color: #c5ccd6; font-size: 13px; text-decoration: none; transition: color 120ms ease, background 120ms ease; }
+.sidebar-link--button { width: 100%; border: 0; background: transparent; text-align: left; }
+.sidebar-link:hover, .sidebar-link.is-active { color: #fff; background: rgba(255, 255, 255, .08); }
+.sidebar-link__icon { display: inline-grid; width: 16px; place-items: center; color: #9ca5b4; font-size: 16px; }
+.sidebar-link.is-active .sidebar-link__icon { color: #ffb0a4; }
+
+.dashboard-main { position: relative; min-width: 0; flex: 1; overflow: hidden; }
+.dashboard-topbar { position: relative; z-index: 2; display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid #e7e8e9; color: #30343b; background: rgba(255, 255, 255, .96); }
+.dashboard-topbar__title { font-size: 15px; font-weight: 700; letter-spacing: .08em; }
+.dashboard-topbar__actions { display: flex; gap: 22px; color: #737982; font-size: 21px; }
+
+.dashboard-main .dashboard-background { inset: 64px 0 0; }
+.dashboard-card { position: absolute; z-index: 1; top: 50%; left: 50%; width: min(600px, calc(100% - 48px)); padding: 42px 48px; border-radius: 4px; color: #252a31; background: rgba(255, 255, 255, .94); box-shadow: 0 12px 32px rgba(45, 52, 62, .14); text-align: center; transform: translate(-50%, -50%); }
+.dashboard-card__avatar { display: grid; width: 76px; height: 76px; margin: 0 auto 14px; place-items: center; border-radius: 50%; color: #fff; background: #837477; font-size: 22px; font-weight: 750; }
+.dashboard-card__eyebrow { margin: 0 0 8px; color: #7f858c; font-size: 13px; }
+.dashboard-card h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.04em; }
+.dashboard-card p:not(.dashboard-card__eyebrow) { max-width: 420px; margin: 12px auto 22px; color: #69717a; line-height: 1.5; }
+.dashboard-card__action { min-height: 42px; padding: 0 20px; border: 0; border-radius: 7px; color: #fff; background: var(--accent); font-weight: 650; }
+.dashboard-card__action:hover { background: var(--accent-dark); }
+
+.dashboard-shell[data-sidebar-collapsed="true"] .dashboard-sidebar { width: 70px; min-width: 70px; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; padding: 0; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand__mark { font-size: 0; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-brand__mark::first-letter { font-size: 25px; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-toggle { transform: rotate(180deg); }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-profile__copy,
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-search,
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-section-title,
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-link span:last-child { display: none; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-profile { justify-content: center; padding-inline: 0; }
+.dashboard-shell[data-sidebar-collapsed="true"] .sidebar-link { justify-content: center; padding-inline: 0; }
 
 .dashboard-background {
     background-color: #e4eaec;
@@ -160,6 +231,16 @@ button { cursor: pointer; touch-action: manipulation; }
 
 @media (max-width: 640px) {
     body { min-height: 100dvh; }
+    .dashboard-sidebar { width: 70px; min-width: 70px; }
+    .sidebar-brand { justify-content: center; padding: 0; }
+    .sidebar-brand__mark { font-size: 0; }
+    .sidebar-brand__mark::first-letter { font-size: 25px; }
+    .sidebar-profile { justify-content: center; padding-inline: 0; }
+    .sidebar-profile__copy, .sidebar-search, .sidebar-section-title, .sidebar-link span:last-child { display: none; }
+    .sidebar-link { justify-content: center; padding-inline: 0; }
+    .dashboard-topbar { padding-inline: 16px; }
+    .dashboard-card { width: calc(100% - 28px); padding: 30px 22px; }
+    .dashboard-card h1 { font-size: 24px; }
     .dashboard-background {
         background-image: url("./assets/office-background-mobile.png");
         background-position: center center;

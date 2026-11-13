@@ -74,7 +74,57 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
 </head>
 <body>
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
-        <div class="dashboard-background" aria-hidden="true"></div>
+        <aside class="dashboard-sidebar" data-sidebar>
+            <div class="sidebar-brand">
+                <span class="sidebar-brand__mark">IAA<span>M</span>X</span>
+                <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menú" aria-expanded="true">
+                    <span aria-hidden="true">‹</span>
+                </button>
+            </div>
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar" aria-hidden="true">IA</div>
+                <div class="sidebar-profile__copy">
+                    <strong>Tu espacio</strong>
+                    <span>WebChat IAAMX</span>
+                </div>
+            </div>
+            <label class="sidebar-search">
+                <span class="sr-only">Buscar</span>
+                <input type="search" placeholder="Buscar" aria-label="Buscar en el panel">
+                <span aria-hidden="true">⌕</span>
+            </label>
+            <nav class="sidebar-nav" aria-label="Navegación principal">
+                <p class="sidebar-section-title">Management</p>
+                <a class="sidebar-link is-active" href="#assistant" data-sidebar-assistant><span class="sidebar-link__icon" aria-hidden="true">✦</span><span>AI Assistant</span></a>
+                <a class="sidebar-link" href="#messages"><span class="sidebar-link__icon" aria-hidden="true">▤</span><span>Messages</span></a>
+                <a class="sidebar-link" href="#conversations"><span class="sidebar-link__icon" aria-hidden="true">▰</span><span>Conversations</span></a>
+                <a class="sidebar-link" href="#history"><span class="sidebar-link__icon" aria-hidden="true">◷</span><span>History</span></a>
+                <a class="sidebar-link" href="#visitors"><span class="sidebar-link__icon" aria-hidden="true">◎</span><span>Visitors</span></a>
+                <a class="sidebar-link" href="#contacts"><span class="sidebar-link__icon" aria-hidden="true">♧</span><span>Contacts</span></a>
+                <a class="sidebar-link" href="#templates"><span class="sidebar-link__icon" aria-hidden="true">▧</span><span>Templates</span></a>
+                <a class="sidebar-link" href="#tasks"><span class="sidebar-link__icon" aria-hidden="true">☑</span><span>Tasks</span></a>
+                <a class="sidebar-link" href="#calendar"><span class="sidebar-link__icon" aria-hidden="true">▣</span><span>Calendar</span></a>
+                <a class="sidebar-link" href="#news"><span class="sidebar-link__icon" aria-hidden="true">▥</span><span>News Site</span></a>
+                <p class="sidebar-section-title">Tools</p>
+                <a class="sidebar-link" href="#settings"><span class="sidebar-link__icon" aria-hidden="true">⚙</span><span>Settings</span></a>
+                <a class="sidebar-link" href="#sessions"><span class="sidebar-link__icon" aria-hidden="true">♙</span><span>Sessions</span></a>
+                <button class="sidebar-link sidebar-link--button" type="button" data-action="logout"><span class="sidebar-link__icon" aria-hidden="true">⇥</span><span>Logout</span></button>
+            </nav>
+        </aside>
+        <section class="dashboard-main" aria-label="Contenido del dashboard">
+            <header class="dashboard-topbar">
+                <span class="dashboard-topbar__title">IAAMXORG</span>
+                <div class="dashboard-topbar__actions" aria-hidden="true"><span>☷</span><span>♟</span></div>
+            </header>
+            <div class="dashboard-background" aria-hidden="true"></div>
+            <section class="dashboard-card" aria-labelledby="dashboard-card-title">
+                <div class="dashboard-card__avatar" aria-hidden="true">IA</div>
+                <p class="dashboard-card__eyebrow">Tu espacio de trabajo</p>
+                <h1 id="dashboard-card-title">Bienvenido a IAAMXORG</h1>
+                <p>Administra tus conversaciones y abre tu asistente desde cualquier sección.</p>
+                <button class="dashboard-card__action" type="button" data-dashboard-assistant>Hablar con el asistente</button>
+            </section>
+        </section>
     </main>
 
     <button class="chat-launcher" type="button" data-chat-open aria-controls="assistant-panel" aria-expanded="false" aria-label="Abrir asistente de IA">

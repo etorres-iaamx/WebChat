@@ -19,6 +19,10 @@
     const popoutButton = document.querySelector('[data-chat-popout]');
     const minimizeButton = document.querySelector('[data-chat-minimize]');
     const closeButton = document.querySelector('[data-chat-close]');
+    const dashboardShell = document.querySelector('.dashboard-shell');
+    const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
+    const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
+    const dashboardAssistant = document.querySelector('[data-dashboard-assistant]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
     const query = new URLSearchParams(window.location.search);
     const isPopupWindow = query.get('window') === 'floating' || query.get('chat_window') === 'floating';
@@ -343,6 +347,14 @@
         hidePanel();
     }
 
+    function setSidebarCollapsed(collapsed) {
+        if (!dashboardShell) return;
+        dashboardShell.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
+        sidebarToggle?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        sidebarToggle?.setAttribute('aria-label', collapsed ? 'Expandir menú' : 'Colapsar menú');
+        try { window.localStorage.setItem('iaamx-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_) { /* storage is optional */ }
+    }
+
     function toggleMaximized() {
         setChatMode(panel.dataset.chatMode === 'maximized' ? lastNonMaximizedMode : 'maximized');
     }
@@ -378,6 +390,9 @@
     });
 
     launcher?.addEventListener('click', showPanel);
+    sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
+    sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); showPanel(); });
+    dashboardAssistant?.addEventListener('click', () => showPanel());
     embedButton?.addEventListener('click', toggleEmbedded);
     maximizeButton?.addEventListener('click', toggleMaximized);
     popoutButton?.addEventListener('click', openPopout);
@@ -394,6 +409,9 @@
     });
 
     renderHistory(initialHistory);
+    let sidebarCollapsed = false;
+    try { sidebarCollapsed = window.localStorage.getItem('iaamx-sidebar-collapsed') === '1'; } catch (_) { /* storage is optional */ }
+    setSidebarCollapsed(sidebarCollapsed);
     setConnection('idle', 'Listo para ayudarte');
     setChatMode('floating');
 

@@ -51,7 +51,11 @@ Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_EN
 y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 `memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
-Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-206 (dashboard con botón flotante) e IAADL-205 (panel de AI Assistant).
+Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-204 (dashboard con
+barra lateral), IAADL-206 (dashboard con botón flotante) e IAADL-205 (panel de AI
+Assistant). La barra lateral es visual y navegable; las secciones que aún no tienen
+backend propio funcionan como destinos de interfaz, mientras AI Assistant abre el
+WebChat real.
 
 ## Arquitectura
 
