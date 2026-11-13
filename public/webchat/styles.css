@@ -90,6 +90,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .dashboard-card__eyebrow { margin: 0 0 8px; color: #7f858c; font-size: 13px; }
 .dashboard-card h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.04em; }
 .dashboard-card p:not(.dashboard-card__eyebrow) { max-width: 420px; margin: 12px auto 22px; color: #69717a; line-height: 1.5; }
+.dashboard-card__hint { margin-top: -12px !important; font-size: 13px; }
 .dashboard-card__action { min-height: 42px; padding: 0 20px; border: 0; border-radius: 7px; color: #fff; background: var(--accent); font-weight: 650; }
 .dashboard-card__action:hover { background: var(--accent-dark); }
 

@@ -165,7 +165,7 @@ final class AuthService
     }
 
     /** @return array<string,mixed>|null */
-    public function userFromSession(string $token): ?array
+    public function userFromSession(string $token, bool $includeInternalId = false): ?array
     {
         if ($token === '') return null;
         $this->cleanupExpiredSessions();
@@ -174,7 +174,7 @@ final class AuthService
         $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff(), 'persistent_idle_cutoff' => $this->persistentIdleCutoff()]);
         $user = $statement->fetch();
         if (is_array($user)) $this->touchSession($tokenHash);
-        return is_array($user) ? $this->publicUser($user) : null;
+        return is_array($user) ? $this->publicUser($user, $includeInternalId) : null;
     }
 
     public function userIdFromSession(string $token): ?int
@@ -267,8 +267,10 @@ final class AuthService
     }
 
     /** @param array<string,mixed> $user @return array<string,mixed> */
-    private function publicUser(array $user): array
+    private function publicUser(array $user, bool $includeInternalId = false): array
     {
-        return ['id' => $user['public_id'], 'name' => $user['display_name'], 'email' => $user['email'], 'status' => $user['status']];
+        $public = ['id' => $user['public_id'], 'name' => $user['display_name'], 'email' => $user['email'], 'status' => $user['status']];
+        if ($includeInternalId) $public['_database_id'] = (int) $user['id'];
+        return $public;
     }
 }

@@ -23,6 +23,7 @@
     const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
     const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
     const dashboardAssistant = document.querySelector('[data-dashboard-assistant]');
+    const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
     const query = new URLSearchParams(window.location.search);
     const isPopupWindow = query.get('window') === 'floating' || query.get('chat_window') === 'floating';
@@ -332,11 +333,7 @@
             return;
         }
 
-        panel.hidden = false;
-        launcher.hidden = true;
-        launcher.setAttribute('aria-expanded', 'true');
-        setChatMode('floating');
-        connect();
+        hidePanel();
     }
 
     function closePanel() {
@@ -389,6 +386,15 @@
         enableSourceWindow();
     });
 
+    async function logout() {
+        logoutButton?.setAttribute('disabled', 'disabled');
+        try {
+            await fetch('../api.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+        } finally {
+            window.location.href = '../index.php';
+        }
+    }
+
     launcher?.addEventListener('click', showPanel);
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
     sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); showPanel(); });
@@ -398,6 +404,7 @@
     popoutButton?.addEventListener('click', openPopout);
     minimizeButton?.addEventListener('click', minimizePanel);
     closeButton?.addEventListener('click', closePanel);
+    logoutButton?.addEventListener('click', logout);
     document.querySelectorAll('[data-prompt]').forEach((button) => button.addEventListener('click', () => submitMessage(button.dataset.prompt || '')));
     form?.addEventListener('submit', (event) => { event.preventDefault(); submitMessage(input?.value || ''); });
     input?.addEventListener('input', resizeInput);
