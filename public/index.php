@@ -35,6 +35,7 @@ $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''
       <form data-form="login">
         <label>Correo<input name="email" type="email" autocomplete="email" required></label>
         <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+        <label class="checkbox-row"><input name="remember_me" type="checkbox" value="1"><span>Recordarme en este dispositivo</span></label>
         <button class="button" type="submit">Continuar</button>
       </form>
       <form data-form="register" hidden>

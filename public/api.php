@@ -26,6 +26,12 @@ function request_data(): array
 
 function auth_cookie_name(): string { return 'webchat_auth'; }
 function auth_token(): string { return (string) ($_COOKIE[auth_cookie_name()] ?? ''); }
+function auth_cookie_options(?int $ttl = null): array
+{
+    $options = ['path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Lax'];
+    if ($ttl !== null) $options['expires'] = time() + $ttl;
+    return $options;
+}
 
 $action = trim((string) ($_GET['action'] ?? ''));
 $data = request_data();
@@ -34,7 +40,7 @@ try {
     $auth = webchat_auth();
     if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $auth->register($data);
-        setcookie(auth_cookie_name(), $result['session_token'], ['expires' => time() + webchat_config()->int('AUTH_SESSION_TTL', 2592000), 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Lax']);
+        setcookie(auth_cookie_name(), $result['session_token'], auth_cookie_options());
         unset($result['session_token']);
         json_response(['ok' => true, 'data' => $result], 201);
     }
@@ -42,13 +48,14 @@ try {
         json_response(['ok' => true, 'data' => $auth->verify((string) ($data['email'] ?? ''), (string) ($data['code'] ?? ''))]);
     }
     if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $result = $auth->login((string) ($data['email'] ?? ''), (string) ($data['password'] ?? ''));
-        setcookie(auth_cookie_name(), $result['session_token'], ['expires' => time() + webchat_config()->int('AUTH_SESSION_TTL', 2592000), 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Lax']);
+        $rememberMe = in_array(strtolower(trim((string) ($data['remember_me'] ?? ''))), ['1', 'true', 'on', 'yes'], true);
+        $result = $auth->login((string) ($data['email'] ?? ''), (string) ($data['password'] ?? ''), $rememberMe);
+        setcookie(auth_cookie_name(), $result['session_token'], $rememberMe ? auth_cookie_options((int) $result['session_ttl']) : auth_cookie_options());
         json_response(['ok' => true, 'data' => ['user' => $result['user']]]);
     }
     if ($action === 'logout') {
         $auth->logout(auth_token());
-        setcookie(auth_cookie_name(), '', ['expires' => time() - 3600, 'path' => '/']);
+        setcookie(auth_cookie_name(), '', array_merge(auth_cookie_options(), ['expires' => time() - 3600]));
         json_response(['ok' => true]);
     }
     if ($action === 'me') {

@@ -82,7 +82,8 @@ final class AuthService
         $mailer = new VerificationMailer($this->config);
         $mailer->sendCode($email, $code, 15);
 
-        return ['user' => $this->publicUser($user), 'session_token' => $this->createSession((int) $user['id']), 'verification_code' => $this->config->bool('APP_ENV_LOCAL_SHOW_CODES', false) ? $code : null];
+        $session = $this->createSession((int) $user['id']);
+        return ['user' => $this->publicUser($user), 'session_token' => $session['token'], 'session_ttl' => $session['ttl'], 'persistent' => false, 'verification_code' => $this->config->bool('APP_ENV_LOCAL_SHOW_CODES', false) ? $code : null];
     }
 
     /** @return array{user: array<string,mixed>, agent_created: bool} */
@@ -150,32 +151,37 @@ final class AuthService
             ->execute(['user_id' => $userId, 'external_id' => $resource['external_agent_id'], 'workspace' => $resource['workspace']]);
     }
 
-    /** @return array{user: array<string,mixed>, session_token: string} */
-    public function login(string $email, string $password): array
+    /** @return array{user: array<string,mixed>, session_token: string, session_ttl: int, persistent: bool} */
+    public function login(string $email, string $password, bool $rememberMe = false): array
     {
         $user = $this->findUserByEmail(strtolower(trim($email)));
         if ($user === null || !is_string($user['password_hash']) || !password_verify($password, $user['password_hash']) || $user['status'] !== 'active') {
             throw new RuntimeException('El correo o la contraseña no son correctos.');
         }
-        return ['user' => $this->publicUser($user), 'session_token' => $this->createSession((int) $user['id'])];
+        $session = $this->createSession((int) $user['id'], $rememberMe);
+        return ['user' => $this->publicUser($user), 'session_token' => $session['token'], 'session_ttl' => $session['ttl'], 'persistent' => $rememberMe];
     }
 
     /** @return array<string,mixed>|null */
     public function userFromSession(string $token): ?array
     {
         if ($token === '') return null;
-        $statement = $this->database->pdo()->prepare('SELECT u.* FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND u.status = \'active\' LIMIT 1');
-        $statement->execute(['token_hash' => Token::hash($token)]);
+        $tokenHash = Token::hash($token);
+        $statement = $this->database->pdo()->prepare('SELECT u.* FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND s.last_seen_at > :idle_cutoff AND u.status = \'active\' LIMIT 1');
+        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff()]);
         $user = $statement->fetch();
+        if (is_array($user)) $this->touchSession($tokenHash);
         return is_array($user) ? $this->publicUser($user) : null;
     }
 
     public function userIdFromSession(string $token): ?int
     {
         if ($token === '') return null;
-        $statement = $this->database->pdo()->prepare('SELECT u.id FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND u.status = \'active\' LIMIT 1');
-        $statement->execute(['token_hash' => Token::hash($token)]);
+        $tokenHash = Token::hash($token);
+        $statement = $this->database->pdo()->prepare('SELECT u.id FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND s.last_seen_at > :idle_cutoff AND u.status = \'active\' LIMIT 1');
+        $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff()]);
         $id = $statement->fetchColumn();
+        if ($id !== false) $this->touchSession($tokenHash);
         return $id === false ? null : (int) $id;
     }
 
@@ -184,13 +190,32 @@ final class AuthService
         $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE token_hash = :token_hash')->execute(['token_hash' => Token::hash($token)]);
     }
 
-    private function createSession(int $userId): string
+    /** @return array{token: string, ttl: int} */
+    private function createSession(int $userId, bool $persistent = false): array
     {
         $token = Token::random(32);
-        $expires = gmdate('Y-m-d H:i:s', time() + $this->config->int('AUTH_SESSION_TTL', 2592000));
+        $ttl = $this->sessionTtl($persistent);
+        $expires = gmdate('Y-m-d H:i:s', time() + $ttl);
         $this->database->pdo()->prepare('INSERT INTO auth_sessions (public_id, user_id, token_hash, expires_at) VALUES (:public_id, :user_id, :token_hash, :expires_at)')
             ->execute(['public_id' => Uuid::v4(), 'user_id' => $userId, 'token_hash' => Token::hash($token), 'expires_at' => $expires]);
-        return $token;
+        return ['token' => $token, 'ttl' => $ttl];
+    }
+
+    private function sessionTtl(bool $persistent): int
+    {
+        $fallback = $persistent ? 2592000 : 43200;
+        return max(300, $this->config->int($persistent ? 'AUTH_SESSION_TTL_PERSISTENT' : 'AUTH_SESSION_TTL_SHORT', $fallback));
+    }
+
+    private function idleCutoff(): string
+    {
+        $seconds = max(300, $this->config->int('AUTH_SESSION_IDLE_TTL', 43200));
+        return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-' . $seconds . ' seconds')->format('Y-m-d H:i:s.u');
+    }
+
+    private function touchSession(string $tokenHash): void
+    {
+        $this->database->pdo()->prepare('UPDATE auth_sessions SET last_seen_at = UTC_TIMESTAMP(6) WHERE token_hash = :token_hash')->execute(['token_hash' => $tokenHash]);
     }
 
     private function ensureLogicalAgent(PDO $pdo, int $userId, string $displayName): bool

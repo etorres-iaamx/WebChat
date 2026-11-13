@@ -10,6 +10,7 @@ Implementado en esta primera entrega:
 
 - Registro en español con los campos de IAADL-101.
 - Inicio de sesión por correo y contraseña.
+- Sesiones temporales por defecto (12 horas de expiración absoluta y 12 horas de inactividad); la opción "Recordarme en este dispositivo" crea una cookie persistente de 30 días, manteniendo el mismo límite de inactividad.
 - Verificación de correo con código temporal.
 - Adaptador de envío preparado para Himalaya; se habilita con `HIMALAYA_ENABLED=1`.
 - Esquema MariaDB normalizado para usuarios, agentes, bindings, sesiones, códigos e identidades.
