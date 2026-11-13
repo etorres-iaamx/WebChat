@@ -42,13 +42,17 @@ def run_json(command: list[str], *, stdin: str | None = None) -> object:
         raise AdapterError("invalid_json") from exc
 
 
+def openclaw_command() -> str:
+    return os.environ.get("OPENCLAW_BINARY", "openclaw")
+
+
 def bind_peer(args: argparse.Namespace) -> dict[str, object]:
     desired = {"channel": args.channel, "accountId": args.account,
                "peer": {"kind": "direct", "id": args.peer_id}}
     lock_path = os.environ.get("OPENCLAW_BINDING_LOCK", "/tmp/webchat-openclaw-bindings.lock")
     with open(lock_path, "a+", encoding="utf-8") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        bindings = run_json(["openclaw", "config", "get", "bindings", "--json"])
+        bindings = run_json([openclaw_command(), "config", "get", "bindings", "--json"])
         if not isinstance(bindings, list):
             raise AdapterError("invalid_bindings")
         for binding in bindings:
@@ -59,9 +63,9 @@ def bind_peer(args: argparse.Namespace) -> dict[str, object]:
             return {"already_present": True, "agent_id": args.agent_id, "match": desired}
         next_bindings = [item for item in bindings if isinstance(item, dict)]
         next_bindings.append({"type": "route", "agentId": args.agent_id, "match": desired})
-        run_json(["openclaw", "config", "patch", "--stdin"],
+        run_json([openclaw_command(), "config", "patch", "--stdin"],
                  stdin=json.dumps({"bindings": next_bindings}))
-        readback = run_json(["openclaw", "config", "get", "bindings", "--json"])
+        readback = run_json([openclaw_command(), "config", "get", "bindings", "--json"])
         if not isinstance(readback, list) or not any(
             isinstance(item, dict) and item.get("agentId") == args.agent_id
             and item.get("match") == desired for item in readback
@@ -74,7 +78,7 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
     agent_id = "webchat-" + args.agent_public_id.replace("-", "").lower()
     root = args.workspace_root.rstrip("/")
     workspace = f"{root}/{agent_id}"
-    payload = run_json(["openclaw", "agents", "add", agent_id, "--workspace", workspace,
+    payload = run_json([args.openclaw_binary, "agents", "add", agent_id, "--workspace", workspace,
                         "--agent-dir", f"{root}/.agents/{agent_id}",
                         "--non-interactive", "--json"])
     external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
@@ -121,6 +125,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="operation", required=True)
     create = sub.add_parser("provision-openclaw")
     create.add_argument("--agent-public-id", required=True)
+    create.add_argument("--openclaw-binary", default=openclaw_command())
     create.add_argument("--workspace-root", required=True)
     create.add_argument("--display-name", required=True)
     create.add_argument("--email", required=True)

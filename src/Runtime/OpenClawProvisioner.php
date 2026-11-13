@@ -18,6 +18,7 @@ final class OpenClawProvisioner
     {
         return (new EmbeddedAgentAdmin($this->config))->run(
             'provision-openclaw', '--agent-public-id', $agentPublicId,
+            '--openclaw-binary', $this->config->required('OPENCLAW_BINARY'),
             '--workspace-root', $this->config->required('OPENCLAW_AGENT_WORKSPACE_ROOT'),
             '--display-name', $displayName, '--email', $email,
             '--phone', $phone, '--country-code', $countryCode,

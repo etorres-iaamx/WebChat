@@ -27,6 +27,7 @@ final class Config
             'OPENCLAW_AGENT_ID' => 'main',
             'OPENCLAW_SESSION_KEY_PREFIX' => 'agent:main:webchat-iaamx',
             'OPENCLAW_GATEWAY_TLS_VERIFY' => '1',
+            'OPENCLAW_BINARY' => 'openclaw',
             'OPENCLAW_PROVISIONING_ENABLED' => '0',
             'OPENCLAW_AGENT_WORKSPACE_ROOT' => '',
             'OPENCLAW_BINDING_ENABLED' => '0',
