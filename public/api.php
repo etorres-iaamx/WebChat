@@ -81,6 +81,9 @@ try {
     }
     json_response(['ok' => false, 'error' => 'Ruta no encontrada.'], 404);
 } catch (Throwable $exception) {
+    if ($exception instanceof \Webchat\Auth\UserAlreadyRegisteredException) {
+        json_response(['ok' => false, 'error' => $exception->getMessage()], 409);
+    }
     $message = webchat_config()->get('APP_ENV', 'local') === 'production' ? 'No fue posible completar la operación.' : $exception->getMessage();
     json_response(['ok' => false, 'error' => $message], 400);
 }

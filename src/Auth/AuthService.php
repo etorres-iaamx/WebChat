@@ -44,7 +44,7 @@ final class AuthService
 
         $existing = $this->findUserByEmail($email);
         if ($existing !== null && (string) $existing['status'] === 'active') {
-            throw new RuntimeException('No fue posible completar el registro.');
+            throw new UserAlreadyRegisteredException('Este correo ya está registrado. Inicia sesión con esa cuenta.');
         }
 
         $code = (string) random_int(100000, 999999);
