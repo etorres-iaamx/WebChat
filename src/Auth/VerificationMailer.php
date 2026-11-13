@@ -21,9 +21,11 @@ final class VerificationMailer
             return;
         }
 
-        $command = ['himalaya', '--account', $this->config->required('HIMALAYA_ACCOUNT'), 'template', 'send'];
-        $process = proc_open($command, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
-        if (!is_resource($process)) throw new RuntimeException('No fue posible iniciar Himalaya.');
+        $command = [$this->config->required('HIMALAYA_BINARY'), '--account', $this->config->required('HIMALAYA_ACCOUNT'), 'template', 'send'];
+        $process = @proc_open($command, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+        if (!is_resource($process)) {
+            throw new RuntimeException('No fue posible iniciar Himalaya. Verifica HIMALAYA_BINARY.');
+        }
         fwrite($pipes[0], "From: " . $this->config->required('HIMALAYA_FROM') . "\nTo: {$recipient}\nSubject: Código de verificación de WebChat\n\n{$body}");
         fclose($pipes[0]);
         stream_get_contents($pipes[1]); fclose($pipes[1]);

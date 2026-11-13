@@ -51,6 +51,7 @@ final class Config
             'HIMALAYA_ENABLED' => '0',
             'HIMALAYA_ACCOUNT' => 'agent',
             'HIMALAYA_FROM' => 'xochitl.bot.iaamx@gmail.com',
+            'HIMALAYA_BINARY' => 'himalaya',
             'APP_ENV_LOCAL_SHOW_CODES' => '0',
         ];
 
