@@ -27,6 +27,9 @@ try {
     }
 
     $session = webchat_repository()->createOrRefreshUserSession($rawToken, $config, $authUserId);
+    if (isset($session['rotated_token']) && is_string($session['rotated_token'])) {
+        $rawToken = $session['rotated_token'];
+    }
     $relayToken = Token::issue(
         ['kind' => 'webchat', 'session_id' => (string) $session['public_id']],
         $config->required('APP_SECRET'),

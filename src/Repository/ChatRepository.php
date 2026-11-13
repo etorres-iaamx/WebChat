@@ -86,7 +86,17 @@ final class ChatRepository
             return $existing;
         }
 
-        return $this->database->transaction(function (PDO $pdo) use ($tokenHash, $config, $userId): array {
+        // A browser can retain this technical cookie after logout, account
+        // switching, or a recovered deployment. Never reuse a token that is
+        // already owned by another user; rotate it before inserting the new
+        // session to avoid a unique-key failure and cross-account reuse.
+        $rotatedToken = null;
+        if ($existing !== null && (int) $existing['user_id'] !== $userId) {
+            $rotatedToken = Token::random(32);
+            $tokenHash = Token::hash($rotatedToken);
+        }
+
+        return $this->database->transaction(function (PDO $pdo) use ($tokenHash, $config, $userId, $rotatedToken): array {
             $user = $pdo->prepare('SELECT u.id, u.public_id, u.display_name, la.public_id AS agent_public_id, rb.external_agent_id FROM users u LEFT JOIN logical_agents la ON la.user_id = u.id LEFT JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = \'openclaw\' WHERE u.id = :id AND u.status = \'active\' LIMIT 1');
             $user->execute(['id' => $userId]);
             $row = $user->fetch();
@@ -103,7 +113,9 @@ final class ChatRepository
             $conversationId = (int) $pdo->lastInsertId();
             $pdo->prepare('INSERT INTO conversation_participants (conversation_id, user_id, role) VALUES (:conversation_id, :user_id, \'owner\')')->execute(['conversation_id' => $conversationId, 'user_id' => $userId]);
             $pdo->prepare('INSERT INTO web_sessions (public_id, token_hash, user_id, conversation_id, expires_at) VALUES (:public_id, :token_hash, :user_id, :conversation_id, :expires_at)')->execute(['public_id' => $sessionPublicId, 'token_hash' => $tokenHash, 'user_id' => $userId, 'conversation_id' => $conversationId, 'expires_at' => $expiresAt]);
-            return ['id' => (int) $pdo->lastInsertId(), 'public_id' => $sessionPublicId, 'user_id' => $userId, 'conversation_id' => $conversationId, 'conversation_public_id' => $conversationPublicId, 'gateway_session_key' => $gatewaySessionKey, 'user_public_id' => $row['public_id'], 'display_name' => $row['display_name'], 'agent_id' => $agentId];
+            $session = ['id' => (int) $pdo->lastInsertId(), 'public_id' => $sessionPublicId, 'user_id' => $userId, 'conversation_id' => $conversationId, 'conversation_public_id' => $conversationPublicId, 'gateway_session_key' => $gatewaySessionKey, 'user_public_id' => $row['public_id'], 'display_name' => $row['display_name'], 'agent_id' => $agentId];
+            if ($rotatedToken !== null) $session['rotated_token'] = $rotatedToken;
+            return $session;
         });
     }
 
