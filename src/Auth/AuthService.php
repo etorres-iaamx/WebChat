@@ -24,6 +24,7 @@ final class AuthService
     /** @return array{user: array<string,mixed>, session_token: string, verification_code?: string} */
     public function register(array $input): array
     {
+        $this->cleanupExpiredSessions();
         $name = trim((string) ($input['name'] ?? ''));
         $email = strtolower(trim((string) ($input['email'] ?? '')));
         $password = (string) ($input['password'] ?? '');
@@ -154,6 +155,7 @@ final class AuthService
     /** @return array{user: array<string,mixed>, session_token: string, session_ttl: int, persistent: bool} */
     public function login(string $email, string $password, bool $rememberMe = false): array
     {
+        $this->cleanupExpiredSessions();
         $user = $this->findUserByEmail(strtolower(trim($email)));
         if ($user === null || !is_string($user['password_hash']) || !password_verify($password, $user['password_hash']) || $user['status'] !== 'active') {
             throw new RuntimeException('El correo o la contraseña no son correctos.');
@@ -166,6 +168,7 @@ final class AuthService
     public function userFromSession(string $token): ?array
     {
         if ($token === '') return null;
+        $this->cleanupExpiredSessions();
         $tokenHash = Token::hash($token);
         $statement = $this->database->pdo()->prepare('SELECT u.* FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND ((s.persistent = 1 AND s.last_seen_at > :persistent_idle_cutoff) OR (s.persistent = 0 AND s.last_seen_at > :idle_cutoff)) AND u.status = \'active\' LIMIT 1');
         $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff(), 'persistent_idle_cutoff' => $this->persistentIdleCutoff()]);
@@ -177,6 +180,7 @@ final class AuthService
     public function userIdFromSession(string $token): ?int
     {
         if ($token === '') return null;
+        $this->cleanupExpiredSessions();
         $tokenHash = Token::hash($token);
         $statement = $this->database->pdo()->prepare('SELECT u.id FROM auth_sessions s INNER JOIN users u ON u.id = s.user_id WHERE s.token_hash = :token_hash AND s.expires_at > UTC_TIMESTAMP(6) AND ((s.persistent = 1 AND s.last_seen_at > :persistent_idle_cutoff) OR (s.persistent = 0 AND s.last_seen_at > :idle_cutoff)) AND u.status = \'active\' LIMIT 1');
         $statement->execute(['token_hash' => $tokenHash, 'idle_cutoff' => $this->idleCutoff(), 'persistent_idle_cutoff' => $this->persistentIdleCutoff()]);
@@ -188,6 +192,13 @@ final class AuthService
     public function logout(string $token): void
     {
         $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE token_hash = :token_hash')->execute(['token_hash' => Token::hash($token)]);
+    }
+
+    public function cleanupExpiredSessions(): int
+    {
+        $statement = $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE expires_at <= UTC_TIMESTAMP(6)');
+        $statement->execute();
+        return $statement->rowCount();
     }
 
     /** @return array{token: string, ttl: int} */
