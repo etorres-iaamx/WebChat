@@ -6,26 +6,6 @@
 	@webchat_ws path /webchat/ws
 	reverse_proxy @webchat_ws 127.0.0.1:8081
 
-	@webchat_legacy path /webchat/webchat/index.php
-	handle @webchat_legacy {
-		respond 404
-	}
-
-	@webchat_auth_file path /webchat/index.php
-	handle @webchat_auth_file {
-		respond 404
-	}
-
-	@webchat_internal_auth path /webchat/auth.php
-	handle @webchat_internal_auth {
-		respond 404
-	}
-
-	@webchat_internal_dashboard path /webchat/dashboard.php
-	handle @webchat_internal_dashboard {
-		respond 404
-	}
-
 	@webchat_dashboard path /webchat/dashboard
 	handle @webchat_dashboard {
 		rewrite * /dashboard.php
