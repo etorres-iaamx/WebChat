@@ -175,6 +175,12 @@ Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y `OPENCLAW_AGENT_ID`
 
 Caddy conserva la actualización WebSocket en `/webchat/ws`; las rutas HTTP se sirven desde el proceso PHP integrado. Si tu cuenta de ngrok no permite `--domain`, usa el hostname asignado y actualiza las dos variables de origen/URL.
 
+Si el navegador pierde la conexión mientras el relay está enviando un frame, el
+relay trata el `Broken pipe` como una desconexión normal del peer y cierra solo esa
+conexión. No se reinicia el Gateway ni se muestra un error de Gateway cuando el
+problema está únicamente entre navegador, proxy y relay; el cliente puede volver a
+conectar mediante su reintento automático.
+
 ## Seguridad y límites del MVP
 
 - Cookie de autenticación `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS.

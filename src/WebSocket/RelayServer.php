@@ -134,7 +134,15 @@ final class RelayServer
             $browser->sendJson(['type' => 'history', 'messages' => $history]);
 
             $this->relayLoop($browser, $gateway, $session);
-        } catch (ConnectionClosed|GatewayException $exception) {
+        } catch (ConnectionClosed $exception) {
+            if (!$browser->isClosed()) {
+                try {
+                    $this->sendError($browser, 'GATEWAY_UNAVAILABLE', 'El Gateway no está disponible.', null, true);
+                } catch (Throwable) {
+                    // The browser may have closed while reporting the failure.
+                }
+            }
+        } catch (GatewayException $exception) {
             try {
                 $this->sendError($browser, 'GATEWAY_UNAVAILABLE', 'El Gateway no está disponible.', null, true);
             } catch (Throwable) {

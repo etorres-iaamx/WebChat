@@ -132,6 +132,11 @@ final class Connection
         $this->send(FrameCodec::PONG, substr($payload, 0, 125));
     }
 
+    public function isClosed(): bool
+    {
+        return $this->closed || !is_resource($this->stream);
+    }
+
     public function close(int $code = 1000): void
     {
         if ($this->closed) {
@@ -316,10 +321,15 @@ final class Connection
 
     private function send(int $opcode, string $payload): void
     {
-        if ($this->closed || !is_resource($this->stream)) {
+        if ($this->isClosed()) {
             throw new ConnectionClosed('WebSocket is closed');
         }
-        self::writeAll($this->stream, FrameCodec::encode($opcode, $payload, $this->maskOutgoing));
+        try {
+            self::writeAll($this->stream, FrameCodec::encode($opcode, $payload, $this->maskOutgoing));
+        } catch (ConnectionClosed $exception) {
+            $this->closed = true;
+            throw $exception;
+        }
     }
 
     private static function readHttpHeaders($stream, int $maxBytes): string
@@ -358,7 +368,9 @@ final class Connection
         $written = 0;
         $length = strlen($data);
         while ($written < $length) {
-            $result = fwrite($stream, substr($data, $written));
+            // Convert a peer disconnect into the typed exception below without
+            // emitting a noisy PHP notice from the worker process.
+            $result = @fwrite($stream, substr($data, $written));
             if ($result === false || $result === 0) {
                 throw new ConnectionClosed('WebSocket write failed');
             }
