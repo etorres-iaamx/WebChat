@@ -29,12 +29,10 @@ export default {
       const channel = normalizeChannel(event.channel);
       const externalIdentity = asText(event.senderId);
       if (!channel || !externalIdentity || event.isGroup === true) return;
-      const message = asText(event.bodyForAgent || event.content || event.text);
 
       const url = new URL(resolveUrl);
       url.searchParams.set("channel", channel);
       url.searchParams.set("external_identity", externalIdentity);
-      if (message) url.searchParams.set("message", message);
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);

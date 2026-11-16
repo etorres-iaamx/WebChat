@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
+
+use Webchat\App\Token;
 $authHeaders = [
     'Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
     'Pragma: no-cache',
@@ -8,18 +10,19 @@ $authHeaders = [
 ];
 foreach ($authHeaders as $header) header($header);
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
-$pairingChannel = strtolower(trim((string) ($_GET['channel'] ?? '')));
-$pairingIdentity = trim((string) ($_GET['external_identity'] ?? ''));
-if (!in_array($pairingChannel, ['telegram', 'whatsapp'], true) || $pairingIdentity === '') {
-    $pairingChannel = '';
-    $pairingIdentity = '';
-}
+$onboardingIntent = Token::verify((string) ($_GET['intent'] ?? ''), (string) webchat_config()->get('APP_SECRET'));
+$pairingChannel = is_array($onboardingIntent) && ($onboardingIntent['purpose'] ?? '') === 'channel_onboarding' ? strtolower(trim((string) ($onboardingIntent['channel'] ?? ''))) : '';
+$pairingIdentity = is_array($onboardingIntent) && ($onboardingIntent['purpose'] ?? '') === 'channel_onboarding' ? trim((string) ($onboardingIntent['external_identity'] ?? '')) : '';
+$intent = $pairingChannel !== '' && $pairingIdentity !== '' ? (string) ($_GET['intent'] ?? '') : '';
 if ($auth !== null) {
+    if ($intent !== '') {
+        webchat_channels()->link(webchat_auth()->userIdFromSession((string) ($_COOKIE['webchat_auth'] ?? '')) ?? 0, $pairingChannel, $pairingIdentity);
+    }
     header('Location: ' . webchat_url('dashboard'));
     exit;
 }
 ?><!doctype html>
-<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>" data-pairing-channel="<?= webchat_h($pairingChannel) ?>" data-pairing-identity="<?= webchat_h($pairingIdentity) ?>">
+<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>" data-onboarding-intent="<?= webchat_h($intent) ?>">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261116-2')) ?>"></head>
 <body>
 <main class="auth-shell">

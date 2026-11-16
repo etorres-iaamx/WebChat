@@ -19,13 +19,13 @@ Implementado en esta primera entrega:
 - Provisioning real de OpenClaw delegado al administrador externo de agentes; se habilita con `OPENCLAW_PROVISIONING_ENABLED=1`.
 
 El historial es exclusivamente el de OpenClaw; `relay_requests` conserva únicamente
-correlación técnica. Telegram y WhatsApp usan identidades externas y pairing.
+correlación técnica. Telegram y WhatsApp usan identidades externas y el pairing nativo de OpenClaw.
 
 ## Siguiente bloque implementado
 
 - `public/channel.php` resuelve una identidad de Telegram/WhatsApp sin exponer el agente.
 - Una identidad desconocida recibe la URL del WebChat y no se enruta a OpenClaw.
-- `pairing_attempts` guarda desafíos temporales y `channel_identities` guarda el vínculo confirmado.
+- `channel_identities` conserva únicamente el vínculo confirmado; WebChat no genera códigos de pairing.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
 - `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adapter puente y el administrador externo.
@@ -33,7 +33,9 @@ correlación técnica. Telegram y WhatsApp usan identidades externas y pairing.
   perfil WebChat (nombre, correo, teléfono, país e identificador público); nunca copia
   contraseñas ni códigos de verificación.
 
-El WebChat solo orquesta identidad, ruteo y sesiones. `runtime/agent_admin.py` es un
+El WebChat solo orquesta identidad, ruteo y sesiones. El pairing nativo de OpenClaw se
+aprueba mediante `webapp2-etorres`; el core conserva la asociación del remitente con
+el agente. `runtime/agent_admin.py` es un
 puente delgado: delega provisioning, configuración JSON, política de aislamiento,
 validación y readback al administrador externo `openclaw-agent-admin`. Solo persiste en
 `runtime_bindings` el resultado de cada operación. Para OpenClaw, el binding de

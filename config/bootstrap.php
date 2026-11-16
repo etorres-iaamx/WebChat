@@ -46,7 +46,7 @@ function webchat_auth(): Webchat\Auth\AuthService
 function webchat_channels(): Webchat\Channels\ChannelIdentityService
 {
     static $channels;
-    return $channels ??= new Webchat\Channels\ChannelIdentityService(webchat_db(), webchat_config());
+    return $channels ??= new Webchat\Channels\ChannelIdentityService(webchat_db());
 }
 
 function webchat_h(string $value): string

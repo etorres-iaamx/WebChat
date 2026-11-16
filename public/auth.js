@@ -1,7 +1,6 @@
 (() => {
   const basePath = document.documentElement.dataset.webchatPath || '/webchat';
-  const pairingChannel = document.documentElement.dataset.pairingChannel || '';
-  const pairingIdentity = document.documentElement.dataset.pairingIdentity || '';
+  const onboardingIntent = document.documentElement.dataset.onboardingIntent || '';
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
   const tabs = document.querySelector('.tabs');
@@ -21,7 +20,18 @@
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
-  forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = `${basePath}/dashboard`; } catch (error) { setStatus(error.message, true); } });
+  forms.login?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      await submit(forms.login, 'login');
+      if (onboardingIntent) {
+        const linkResponse = await fetch(`${basePath}/api.php?action=channel/link`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({intent: onboardingIntent}) });
+        const link = await linkResponse.json();
+        if (!linkResponse.ok || !link.ok) throw new Error(link.error || 'No fue posible vincular el canal.');
+      }
+      location.href = `${basePath}/dashboard`;
+    } catch (error) { setStatus(error.message, true); }
+  });
   forms.register?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (registrationStarted) return;
@@ -40,17 +50,12 @@
     event.preventDefault();
     try {
       await submit(forms.verify, 'verify');
-      if (pairingChannel && pairingIdentity) {
-        const response = await fetch(`${basePath}/api.php?action=pairing/start`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({channel: pairingChannel, external_identity: pairingIdentity}) });
-        const pairing = await response.json();
-        if (response.ok && pairing.ok && pairing.data?.challenge) {
-          setStatus(`Correo verificado. Envía este código al bot de ${pairingChannel}: ${pairing.data.challenge}`);
-        } else {
-          setStatus('Correo verificado. Ya puedes iniciar sesión.');
-        }
-      } else {
-        setStatus('Correo verificado. Ya puedes iniciar sesión.');
+      if (onboardingIntent) {
+        const linkResponse = await fetch(`${basePath}/api.php?action=channel/link`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({intent: onboardingIntent}) });
+        const link = await linkResponse.json();
+        if (!linkResponse.ok || !link.ok) throw new Error(link.error || 'No fue posible vincular el canal.');
       }
+      setStatus('Correo verificado. Ya puedes iniciar sesión.');
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) { setStatus(error.message, true); }
