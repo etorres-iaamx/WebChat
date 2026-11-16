@@ -16,7 +16,7 @@ Implementado en esta primera entrega:
 - Esquema MariaDB normalizado para usuarios, agentes, bindings, sesiones, códigos e identidades.
 - Creación idempotente del agente lógico al verificar el correo.
 - WebChat protegido: una persona no autenticada no puede abrir el chat.
-- Provisioning real de OpenClaw preparado mediante `openclaw agents add`; se habilita con `OPENCLAW_PROVISIONING_ENABLED=1`.
+- Provisioning real de OpenClaw delegado al administrador externo de agentes; se habilita con `OPENCLAW_PROVISIONING_ENABLED=1`.
 
 El historial es exclusivamente el de OpenClaw; `relay_requests` conserva únicamente
 correlación técnica. Telegram y WhatsApp usan identidades externas y pairing.
@@ -28,17 +28,27 @@ correlación técnica. Telegram y WhatsApp usan identidades externas y pairing.
 - `pairing_attempts` guarda desafíos temporales y `channel_identities` guarda el vínculo confirmado.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
-- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adapter Python embebido.
+- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adapter puente y el administrador externo.
 - Al crear el agente, el adapter genera su `USER.md` con los datos verificados del
   perfil WebChat (nombre, correo, teléfono, país e identificador público); nunca copia
   contraseñas ni códigos de verificación.
 
-El provisioning de runtimes está integrado en WebChat: PHP orquesta un adapter Python
-versionado en `runtime/agent_admin.py`, dentro de este mismo repositorio, que delega en
-las CLIs oficiales. WebChat no depende de otro repositorio para administrar OpenClaw o
-Hermes. Solo persiste en `runtime_bindings` el resultado de cada operación. Para
-OpenClaw, el binding de Telegram/WhatsApp conserva la identidad externa como un peer
-directo.
+El WebChat solo orquesta identidad, ruteo y sesiones. `runtime/agent_admin.py` es un
+puente delgado: delega provisioning, configuración JSON, política de aislamiento,
+validación y readback al administrador externo `openclaw-agent-admin`. Solo persiste en
+`runtime_bindings` el resultado de cada operación. Para OpenClaw, el binding de
+Telegram/WhatsApp conserva la identidad externa como un peer directo.
+
+### Aislamiento sin Docker
+
+El administrador configura cada agente con el backend `ssh` de OpenClaw, apuntando a
+un usuario SSH dedicado y a un workspace remoto con permisos Unix propios. Esto evita
+Docker sin convertir `workspaceOnly` o `AGENTS.md` en una falsa frontera de seguridad.
+El administrador también aplica y verifica `tools.sessions.visibility=agent`,
+`tools.agentToAgent.enabled=false`, filesystem `workspaceOnly`, sandbox por agente y
+workspace `rw`. Configura `AGENT_ADMIN_MANAGER_SCRIPT`, `OPENCLAW_SSH_TARGET` y
+`OPENCLAW_SSH_WORKSPACE_ROOT`; el usuario SSH debe existir previamente y no debe
+compartirse entre agentes.
 
 Para activar provisioning en un entorno de pruebas, define también un workspace permitido:
 
