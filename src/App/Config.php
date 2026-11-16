@@ -26,7 +26,6 @@ final class Config
             'OPENCLAW_GATEWAY_TOKEN' => '',
             'OPENCLAW_AGENT_ID' => 'main',
             'OPENCLAW_SESSION_KEY_PREFIX' => 'agent:main:webchat-iaamx',
-            'OPENCLAW_SESSION_NAMESPACE' => 'webchat',
             'OPENCLAW_GATEWAY_TLS_VERIFY' => '1',
             'OPENCLAW_BINARY' => 'openclaw',
             'OPENCLAW_PROVISIONING_ENABLED' => '0',
@@ -202,8 +201,7 @@ final class Config
 
     public function gatewaySessionKeyForAgent(string $agentId, string $sessionPublicId): string
     {
-        $namespace = trim((string) $this->get('OPENCLAW_SESSION_NAMESPACE', 'webchat'), ':');
-        return 'agent:' . trim($agentId, ':') . ':' . ($namespace !== '' ? $namespace : 'webchat') . ':' . substr($sessionPublicId, 0, 12);
+        return 'agent:' . trim($agentId, ':') . ':' . substr($sessionPublicId, 0, 12);
     }
 
 }
