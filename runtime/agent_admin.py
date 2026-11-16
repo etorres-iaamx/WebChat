@@ -82,6 +82,14 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
                         "--agent-dir", f"{root}/.agents/{agent_id}",
                         "--non-interactive", "--json"])
     external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
+    atomic_write(Path(workspace) / "AGENTS.md", (
+        "# WebChat agent isolation\n\n"
+        "This workspace belongs only to the authenticated WebChat user identified in USER.md.\n"
+        "Never claim or imply access to other users, agents, sessions, workspaces, host paths, files, tools, or Gateway internals.\n"
+        "Do not enumerate persistent agents or reveal infrastructure paths. If asked for another user's data, refuse clearly.\n"
+        "Use only the current conversation and the user's own information explicitly provided in this workspace.\n"
+        "If you cannot verify access, say so; never guess or hallucinate access.\n"
+    ))
     atomic_write(Path(workspace) / "USER.md", (
         "# USER\n\n"
         f"- Nombre: {profile_value(args.display_name)}\n"

@@ -15,7 +15,7 @@ $config = webchat_config();
 $authToken = (string) ($_COOKIE['webchat_auth'] ?? '');
 $authUser = webchat_auth()->userFromSession($authToken, true);
 if ($authUser === null) {
-    header('Location: /webchat/');
+    header('Location: ' . webchat_url() . '/');
     exit;
 }
 $authUserId = (int) ($authUser['_database_id'] ?? 0);
@@ -62,6 +62,9 @@ try {
 }
 
 $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+$avatarUrl = !empty($authUser['has_avatar'])
+    ? webchat_url('avatar.php?v=' . rawurlencode((string) ($authUser['avatar_version'] ?? '')))
+    : '';
 $clientConfig = json_encode([
     'token' => $relayToken,
     'webSocketUrl' => $webSocketUrl,
@@ -70,25 +73,31 @@ $clientConfig = json_encode([
 $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
 ?>
 <!doctype html>
-<html lang="es">
+<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light">
     <title>IAAMXORG · Panel de control</title>
-    <link rel="stylesheet" href="/webchat/dashboard.css?v=20261113-1533">
+    <link rel="stylesheet" href="<?= webchat_h(webchat_url('dashboard.css?v=20261116-18')) ?>">
 </head>
 <body>
+    <div class="viewport-size-warning" data-viewport-warning hidden role="alertdialog" aria-modal="true" aria-labelledby="viewport-warning-title">
+        <div class="viewport-size-warning__card">
+            <strong id="viewport-warning-title">Amplía la ventana para usar el WebChat</strong>
+        </div>
+    </div>
     <main class="dashboard-shell" aria-label="Panel de control IAAMXORG">
         <aside class="dashboard-sidebar" data-sidebar>
             <div class="sidebar-brand">
-                <img class="sidebar-brand__logo" src="/webchat/assets/iaa-mx-pleno-oscuro.svg" alt="IAA MX">
+                <img class="sidebar-brand__logo" src="<?= webchat_h(webchat_url('assets/iaa-mx-pleno-oscuro.svg')) ?>" alt="IAA MX">
                 <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menú" aria-expanded="true">
                     <span aria-hidden="true">‹</span>
                 </button>
             </div>
             <div class="sidebar-profile">
-                <div class="sidebar-avatar" aria-hidden="true"><?= webchat_h(mb_strtoupper(mb_substr((string) $authUser['name'], 0, 2))) ?></div>
+                <div class="sidebar-avatar" data-avatar-fallback <?= $avatarUrl !== '' ? 'hidden' : '' ?> aria-hidden="true"><?= webchat_h(mb_strtoupper(mb_substr((string) $authUser['name'], 0, 2))) ?></div>
+                <img class="sidebar-avatar sidebar-avatar--image" data-avatar-image src="<?= webchat_h($avatarUrl) ?>" alt="Foto de perfil" <?= $avatarUrl === '' ? 'hidden' : '' ?>>
                 <div class="sidebar-profile__copy">
                     <strong><?= webchat_h((string) $authUser['name']) ?></strong>
                     <span><?= webchat_h((string) $authUser['email']) ?></span>
@@ -114,33 +123,50 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                     </div>
                     <button class="profile-panel__close" type="button" data-profile-close aria-label="Cerrar perfil">×</button>
                 </div>
-                <dl class="profile-panel__details">
-                    <div><dt>Nombre</dt><dd><?= webchat_h((string) $authUser['name']) ?></dd></div>
-                    <div><dt>Correo electrónico</dt><dd><?= webchat_h((string) $authUser['email']) ?></dd></div>
-                    <div><dt>Estado</dt><dd>Cuenta activa</dd></div>
-                </dl>
-                <div class="profile-panel__options" aria-label="Opciones de perfil">
-                    <h2>Personalización y acceso</h2>
-                    <button class="profile-option" type="button" disabled>
-                        <span class="profile-option__icon" aria-hidden="true">◉</span>
-                        <span><strong>Foto de perfil</strong><small>Próximamente · podrás cambiar tu avatar.</small></span>
-                        <span class="profile-option__status">Próximamente</span>
-                    </button>
-                    <button class="profile-option" type="button" disabled>
-                        <span class="profile-option__icon" aria-hidden="true">◆</span>
-                        <span><strong>Cambiar contraseña</strong><small>Próximamente · gestión segura de credenciales.</small></span>
-                        <span class="profile-option__status">Próximamente</span>
-                    </button>
-                    <button class="profile-option" type="button" disabled>
-                        <span class="profile-option__icon" aria-hidden="true">✈</span>
-                        <span><strong>Canal de Telegram</strong><small>Próximamente · vinculación con tu agente.</small></span>
-                        <span class="profile-option__status">Próximamente</span>
-                    </button>
-                    <button class="profile-option" type="button" disabled>
-                        <span class="profile-option__icon" aria-hidden="true">◌</span>
-                        <span><strong>Canal de WhatsApp</strong><small>Próximamente · vinculación con tu agente.</small></span>
-                        <span class="profile-option__status">Próximamente</span>
-                    </button>
+                <div class="profile-panel__layout">
+                    <div class="profile-panel__main">
+                        <div class="profile-panel__identity">
+                            <dl class="profile-panel__details profile-panel__details--compact">
+                                <div><dt>Nombre</dt><dd><?= webchat_h((string) $authUser['name']) ?></dd></div>
+                                <div><dt>Correo electrónico</dt><dd><?= webchat_h((string) $authUser['email']) ?></dd></div>
+                                <div><dt>Estado</dt><dd>Cuenta activa</dd></div>
+                            </dl>
+                            <div class="profile-panel__avatar" aria-label="Foto de perfil">
+                                <div class="profile-panel__avatar-fallback" data-avatar-fallback <?= $avatarUrl !== '' ? 'hidden' : '' ?> aria-hidden="true"><?= webchat_h(mb_strtoupper(mb_substr((string) $authUser['name'], 0, 2))) ?></div>
+                                <img data-avatar-image src="<?= webchat_h($avatarUrl) ?>" alt="Foto de perfil" <?= $avatarUrl === '' ? 'hidden' : '' ?>>
+                            </div>
+                        </div>
+                        <div class="profile-panel__options" aria-label="Opciones de perfil">
+                            <h2>Personalización y acceso</h2>
+                            <details class="profile-option">
+                                <summary><span class="profile-option__icon" aria-hidden="true">◉</span><span><strong>Foto de perfil</strong><small>Selecciona una imagen para actualizar tu avatar.</small></span><span class="profile-option__status">Abrir</span></summary>
+                                <form class="profile-form profile-avatar-form" data-avatar-form>
+                                    <div class="profile-form__heading"><div><strong>Foto de perfil</strong><small>JPG, PNG o WebP · máximo 5 MB.</small></div></div>
+                                    <label class="file-picker">
+                                        <span class="file-picker__label">Seleccionar foto</span>
+                                        <span class="file-picker__name" data-avatar-file-name>Ningún archivo seleccionado</span>
+                                        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" data-avatar-input required>
+                                    </label>
+                                    <button class="profile-action" type="submit">Guardar foto</button>
+                                    <p class="profile-form__status" data-avatar-status role="status" aria-live="polite"></p>
+                                </form>
+                            </details>
+                            <details class="profile-option">
+                                <summary><span class="profile-option__icon" aria-hidden="true">◆</span><span><strong>Cambiar contraseña</strong><small>Actualiza de forma segura tus credenciales.</small></span><span class="profile-option__status">Abrir</span></summary>
+                                <form class="profile-form" data-password-form>
+                                    <div class="profile-form__heading"><div><strong>Cambiar contraseña</strong><small>Usa al menos 10 caracteres.</small></div></div>
+                                    <label>Contraseña actual<input type="password" name="current_password" autocomplete="current-password" required></label>
+                                    <label>Nueva contraseña<input type="password" name="new_password" minlength="10" autocomplete="new-password" required></label>
+                                    <label>Confirmar contraseña<input type="password" name="new_password_confirmation" minlength="10" autocomplete="new-password" required></label>
+                                    <button class="profile-action" type="submit">Actualizar contraseña</button>
+                                    <p class="profile-form__status" data-password-status role="status" aria-live="polite"></p>
+                                </form>
+                            </details>
+                            <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>Próximamente · vinculación con tu agente.</small></span><span class="profile-option__status">Próximamente</span></button>
+                            <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Próximamente · vinculación con tu agente.</small></span><span class="profile-option__status">Próximamente</span></button>
+                        </div>
+                    </div>
+                    <div class="profile-panel__empty" aria-hidden="true"></div>
                 </div>
             </section>
             <section class="settings-panel" id="settings-panel" data-settings-panel hidden aria-labelledby="settings-title">
@@ -187,7 +213,7 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
     <aside class="chat-panel" id="assistant-panel" hidden aria-label="Asistente de IA">
         <header class="chat-header">
             <strong class="chat-header__title">
-                <img class="chat-header__logo" src="/webchat/assets/iaa-mx-pleno-claro.svg" alt="IAA MX">
+                <img class="chat-header__logo" src="<?= webchat_h(webchat_url('assets/iaa-mx-pleno-claro.svg')) ?>" alt="IAA MX">
                 <span class="sr-only">Asistente de IA</span>
             </strong>
             <div class="chat-header__actions">
@@ -248,6 +274,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         window.IAAMX_WEBCHAT = <?= $clientConfig ?>;
         window.IAAMX_HISTORY = <?= $historyJson ?>;
     </script>
-    <script src="/webchat/dashboard.js" defer></script>
+    <script src="<?= webchat_h(webchat_url('dashboard.js?v=20261116-1')) ?>" defer></script>
 </body>
 </html>

@@ -183,28 +183,26 @@ final class Connection
     /** @return array{opcode:int,payload:string}|null */
     public function nextMessageNonBlocking(): ?array
     {
-        while (true) {
-            $frame = $this->readFrameNonBlocking();
-            if ($frame === null) {
-                return null;
-            }
-            $opcode = $frame['opcode'];
-            if ($opcode === FrameCodec::PING) {
-                $this->sendPong($frame['payload']);
-                continue;
-            }
-            if ($opcode === FrameCodec::PONG) {
-                continue;
-            }
-            if ($opcode === FrameCodec::CLOSE) {
-                $this->close();
-                throw new ConnectionClosed('WebSocket peer closed the connection');
-            }
-            if ($opcode !== FrameCodec::TEXT && $opcode !== FrameCodec::BINARY) {
-                continue;
-            }
-            return ['opcode' => $opcode, 'payload' => $frame['payload']];
+        $frame = $this->readFrameNonBlocking();
+        if ($frame === null) {
+            return null;
         }
+        $opcode = $frame['opcode'];
+        if ($opcode === FrameCodec::PING) {
+            $this->sendPong($frame['payload']);
+            return null;
+        }
+        if ($opcode === FrameCodec::PONG) {
+            return null;
+        }
+        if ($opcode === FrameCodec::CLOSE) {
+            $this->close();
+            throw new ConnectionClosed('WebSocket peer closed the connection');
+        }
+        if ($opcode !== FrameCodec::TEXT && $opcode !== FrameCodec::BINARY) {
+            return null;
+        }
+        return ['opcode' => $opcode, 'payload' => $frame['payload']];
     }
 
     /** @return array<string, mixed>|null */
@@ -242,7 +240,7 @@ final class Connection
             if (!$this->waitForReadable($remaining)) {
                 return null;
             }
-            $this->readFromStream();
+            $this->readFromStream(false);
         }
     }
 
@@ -250,7 +248,10 @@ final class Connection
     private function readFrameNonBlocking(): ?array
     {
         if ($this->buffer === '') {
-            $this->readFromStream();
+            // This method is called only after stream_select reports the
+            // socket readable. An empty read therefore means the peer closed
+            // the connection, not an idle non-blocking socket.
+            $this->readFromStream(true);
         }
         $frame = FrameCodec::decode($this->buffer, $this->expectMasked, $this->maxPayload);
         return $frame === null ? null : $this->assembleFrame($frame);
@@ -286,18 +287,17 @@ final class Connection
         return ['opcode' => $frame['opcode'], 'payload' => $frame['payload']];
     }
 
-    private function readFromStream(): void
+    private function readFromStream(bool $nonBlocking): void
     {
         if (!is_resource($this->stream) || feof($this->stream)) {
             throw new ConnectionClosed('WebSocket stream ended');
         }
         $chunk = fread($this->stream, 65536);
-        // A readable non-blocking socket that yields an empty chunk has been
-        // closed by its peer. Treat it as EOF immediately; otherwise the relay
-        // can spin forever on a CLOSE-WAIT socket after the Gateway disconnects.
-        if ($chunk === false || $chunk === '' || feof($this->stream)) {
+        if ($chunk === false || ($nonBlocking && $chunk === '') || ($chunk === '' && feof($this->stream)) || feof($this->stream)) {
             throw new ConnectionClosed('WebSocket stream ended');
         }
+        // Non-blocking sockets may return an empty chunk while no frame is
+        // available yet. That is not EOF; the next poll should try again.
         if ($chunk !== '') {
             $this->buffer .= $chunk;
         }

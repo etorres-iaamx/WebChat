@@ -194,6 +194,89 @@ final class AuthService
         $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE token_hash = :token_hash')->execute(['token_hash' => Token::hash($token)]);
     }
 
+    /** @return array<string,mixed> */
+    public function changePassword(int $userId, string $currentPassword, string $newPassword, string $sessionToken): array
+    {
+        if ($userId < 1 || $currentPassword === '' || strlen($newPassword) < 10) {
+            throw new RuntimeException('La contraseña nueva debe tener al menos 10 caracteres.');
+        }
+        if ($currentPassword === $newPassword) {
+            throw new RuntimeException('La contraseña nueva debe ser diferente.');
+        }
+
+        $user = $this->findUserById($userId);
+        if ($user === null || !is_string($user['password_hash']) || !password_verify($currentPassword, $user['password_hash'])) {
+            throw new RuntimeException('La contraseña actual no es correcta.');
+        }
+
+        $currentTokenHash = Token::hash($sessionToken);
+        $this->database->transaction(function (PDO $pdo) use ($userId, $newPassword, $currentTokenHash): void {
+            $pdo->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id')
+                ->execute(['password_hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $userId]);
+            $pdo->prepare('DELETE FROM auth_sessions WHERE user_id = :user_id AND token_hash <> :token_hash')
+                ->execute(['user_id' => $userId, 'token_hash' => $currentTokenHash]);
+            $pdo->prepare('INSERT INTO audit_events (user_id, event_type, target_type, target_public_id) VALUES (:user_id, \'user.password_changed\', \'user\', (SELECT public_id FROM users WHERE id = :lookup_id))')
+                ->execute(['user_id' => $userId, 'lookup_id' => $userId]);
+        });
+
+        return $this->publicUser($this->findUserById($userId) ?? $user);
+    }
+
+    /** @return array<string,mixed> */
+    public function updateAvatar(int $userId, array $file): array
+    {
+        if ($userId < 1 || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('Selecciona una imagen válida.');
+        }
+        $size = (int) ($file['size'] ?? 0);
+        $tmp = (string) ($file['tmp_name'] ?? '');
+        if ($size < 1 || $size > 5 * 1024 * 1024 || !is_uploaded_file($tmp)) {
+            throw new RuntimeException('La foto debe pesar como máximo 5 MB.');
+        }
+
+        $info = @getimagesize($tmp);
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp);
+        $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        if (!is_array($info) || (int) ($info[0] ?? 0) > 4096 || (int) ($info[1] ?? 0) > 4096 || !isset($extensions[$mime])) {
+            throw new RuntimeException('La foto debe ser JPG, PNG o WebP.');
+        }
+
+        $storageRoot = $this->storageRoot();
+        $avatarDirectory = $storageRoot . '/avatars';
+        if (!is_dir($avatarDirectory) && !mkdir($avatarDirectory, 0750, true) && !is_dir($avatarDirectory)) {
+            throw new RuntimeException('No fue posible preparar el almacenamiento de fotos.');
+        }
+        $relativePath = 'avatars/' . bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+        $destination = $storageRoot . '/' . $relativePath;
+        if (!move_uploaded_file($tmp, $destination)) {
+            throw new RuntimeException('No fue posible guardar la foto.');
+        }
+        chmod($destination, 0640);
+
+        $user = $this->findUserById($userId);
+        if ($user === null) {
+            @unlink($destination);
+            throw new RuntimeException('La cuenta no existe.');
+        }
+        $this->database->pdo()->prepare('UPDATE users SET avatar_path = :avatar_path WHERE id = :id')
+            ->execute(['avatar_path' => $relativePath, 'id' => $userId]);
+        $this->deleteStoredAvatar($user['avatar_path'] ?? null, $relativePath);
+        return $this->publicUser($this->findUserById($userId) ?? $user);
+    }
+
+    /** @return array{path:string,mime:string}|null */
+    public function avatarFileForUser(int $userId): ?array
+    {
+        $user = $this->findUserById($userId);
+        $relative = is_array($user) ? (string) ($user['avatar_path'] ?? '') : '';
+        if ($relative === '' || !str_starts_with($relative, 'avatars/') || str_contains($relative, '..')) return null;
+        $root = realpath($this->storageRoot());
+        $path = $root === false ? false : realpath($root . '/' . $relative);
+        if ($root === false || $path === false || !str_starts_with($path, $root . DIRECTORY_SEPARATOR) || !is_file($path)) return null;
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($path);
+        return in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) ? ['path' => $path, 'mime' => $mime] : null;
+    }
+
     public function cleanupExpiredSessions(): int
     {
         $statement = $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE expires_at <= UTC_TIMESTAMP(6)');
@@ -258,6 +341,30 @@ final class AuthService
     }
 
     /** @return array<string,mixed>|null */
+    private function findUserById(int $id): ?array
+    {
+        $statement = $this->database->pdo()->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+        $statement->execute(['id' => $id]);
+        $user = $statement->fetch();
+        return is_array($user) ? $user : null;
+    }
+
+    private function storageRoot(): string
+    {
+        $configured = trim((string) $this->config->get('WEBCHAT_STORAGE_PATH', ''));
+        return rtrim($configured !== '' ? $configured : dirname(__DIR__, 2) . '/storage', '/');
+    }
+
+    private function deleteStoredAvatar(mixed $relativePath, string $replacement): void
+    {
+        $relative = (string) $relativePath;
+        if ($relative === '' || $relative === $replacement || !str_starts_with($relative, 'avatars/') || str_contains($relative, '..')) return;
+        $root = realpath($this->storageRoot());
+        $path = $root === false ? false : realpath($root . '/' . $relative);
+        if ($root !== false && $path !== false && str_starts_with($path, $root . DIRECTORY_SEPARATOR) && is_file($path)) @unlink($path);
+    }
+
+    /** @return array<string,mixed>|null */
     private function findUserByIdWithPdo(PDO $pdo, int $id): ?array
     {
         $statement = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
@@ -269,7 +376,7 @@ final class AuthService
     /** @param array<string,mixed> $user @return array<string,mixed> */
     private function publicUser(array $user, bool $includeInternalId = false): array
     {
-        $public = ['id' => $user['public_id'], 'name' => $user['display_name'], 'email' => $user['email'], 'status' => $user['status']];
+        $public = ['id' => $user['public_id'], 'name' => $user['display_name'], 'email' => $user['email'], 'status' => $user['status'], 'has_avatar' => !empty($user['avatar_path']), 'avatar_version' => $user['updated_at'] ?? null];
         if ($includeInternalId) $public['_database_id'] = (int) $user['id'];
         return $public;
     }

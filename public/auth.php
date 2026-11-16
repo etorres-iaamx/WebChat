@@ -9,16 +9,16 @@ $authHeaders = [
 foreach ($authHeaders as $header) header($header);
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
 if ($auth !== null) {
-    header('Location: /webchat/dashboard');
+    header('Location: ' . webchat_url('dashboard'));
     exit;
 }
 ?><!doctype html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="./auth.css"></head>
+<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261116-2')) ?>"></head>
 <body>
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="title">
-    <img class="brand" src="./brand/iaa-mx-pleno-claro.svg" alt="IAA MX">
+    <img class="brand" src="<?= webchat_h(webchat_url('brand/iaa-mx-pleno-claro.svg')) ?>" alt="IAA MX">
     <p class="eyebrow">WebChat</p>
     <h1 id="title">Inicia sesión o regístrate</h1>
       <div class="tabs"><button class="tab is-active" data-tab="login">Iniciar sesión</button><button class="tab" data-tab="register">Crear cuenta</button></div>
@@ -67,5 +67,5 @@ if ($auth !== null) {
     <p class="status" data-status role="status"></p>
   </section>
 </main>
-<script src="./auth.js" defer></script>
+<script src="<?= webchat_h(webchat_url('auth.js?v=20261116-2')) ?>" defer></script>
 </body></html>

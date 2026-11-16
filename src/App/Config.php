@@ -26,6 +26,7 @@ final class Config
             'OPENCLAW_GATEWAY_TOKEN' => '',
             'OPENCLAW_AGENT_ID' => 'main',
             'OPENCLAW_SESSION_KEY_PREFIX' => 'agent:main:webchat-iaamx',
+            'OPENCLAW_SESSION_NAMESPACE' => 'webchat-v2',
             'OPENCLAW_GATEWAY_TLS_VERIFY' => '1',
             'OPENCLAW_BINARY' => 'openclaw',
             'OPENCLAW_PROVISIONING_ENABLED' => '0',
@@ -47,6 +48,8 @@ final class Config
             'WEBCHAT_SESSION_TTL' => '2592000',
             'WEBCHAT_MAX_MESSAGE_LENGTH' => '4000',
             'WEBCHAT_PUBLIC_BASE_URL' => '',
+            'WEBCHAT_PUBLIC_PATH' => '/webchat',
+            'WEBCHAT_STORAGE_PATH' => '',
             'AUTH_SESSION_TTL_SHORT' => '43200',
             'AUTH_SESSION_TTL_PERSISTENT' => '2592000',
             'AUTH_SESSION_IDLE_TTL' => '43200',
@@ -176,6 +179,16 @@ final class Config
         return $scheme . '://' . $authority . (string) $this->get('WEBCHAT_PUBLIC_WS_PATH', '/webchat/ws');
     }
 
+    public function publicPath(): string
+    {
+        $path = trim((string) $this->get('WEBCHAT_PUBLIC_PATH', '/webchat'));
+        if ($path === '' || $path === '/') {
+            return '';
+        }
+
+        return '/' . trim($path, '/');
+    }
+
     public function gatewaySessionKey(string $sessionPublicId): string
     {
         $prefix = trim((string) $this->get('OPENCLAW_SESSION_KEY_PREFIX', 'agent:main:webchat-iaamx'));
@@ -184,7 +197,8 @@ final class Config
 
     public function gatewaySessionKeyForAgent(string $agentId, string $sessionPublicId): string
     {
-        return 'agent:' . trim($agentId, ':') . ':webchat:' . substr($sessionPublicId, 0, 12);
+        $namespace = trim((string) $this->get('OPENCLAW_SESSION_NAMESPACE', 'webchat-v2'), ':');
+        return 'agent:' . trim($agentId, ':') . ':' . ($namespace !== '' ? $namespace : 'webchat-v2') . ':' . substr($sessionPublicId, 0, 12);
     }
 
 }

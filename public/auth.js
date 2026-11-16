@@ -1,4 +1,5 @@
 (() => {
+  const basePath = document.documentElement.dataset.webchatPath || '/webchat';
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
   const tabs = document.querySelector('.tabs');
@@ -13,12 +14,12 @@
   }));
   async function submit(form, action) {
     const payload = Object.fromEntries(new FormData(form).entries());
-    const response = await fetch(`./api.php?action=${action}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const response = await fetch(`${basePath}/api.php?action=${action}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     const body = await response.json();
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
-  forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = './dashboard'; } catch (error) { setStatus(error.message, true); } });
+  forms.login?.addEventListener('submit', async (event) => { event.preventDefault(); try { await submit(forms.login, 'login'); location.href = `${basePath}/dashboard`; } catch (error) { setStatus(error.message, true); } });
   forms.register?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (registrationStarted) return;

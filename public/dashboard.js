@@ -2,6 +2,7 @@
     'use strict';
 
     const config = window.IAAMX_WEBCHAT || {};
+    const basePath = document.documentElement.dataset.webchatPath || '/webchat';
     const initialHistory = Array.isArray(window.IAAMX_HISTORY) ? window.IAAMX_HISTORY : [];
     const panel = document.querySelector('#assistant-panel');
     const launcher = document.querySelector('[data-chat-open]');
@@ -20,12 +21,21 @@
     const minimizeButton = document.querySelector('[data-chat-minimize]');
     const closeButton = document.querySelector('[data-chat-close]');
     const dashboardShell = document.querySelector('.dashboard-shell');
+    const dashboardMain = document.querySelector('.dashboard-main');
     const sidebarToggle = document.querySelector('[data-sidebar-toggle]');
     const sidebarAssistant = document.querySelector('[data-sidebar-assistant]');
     const sidebarProfile = document.querySelector('[data-sidebar-profile]');
     const sidebarSettings = document.querySelector('[data-sidebar-settings]');
     const profilePanel = document.querySelector('[data-profile-panel]');
     const profileClose = document.querySelector('[data-profile-close]');
+    const avatarForm = document.querySelector('[data-avatar-form]');
+    const avatarInput = document.querySelector('[data-avatar-input]');
+    const avatarFileName = document.querySelector('[data-avatar-file-name]');
+    const avatarStatus = document.querySelector('[data-avatar-status]');
+    const passwordForm = document.querySelector('[data-password-form]');
+    const passwordStatus = document.querySelector('[data-password-status]');
+    const avatarImages = document.querySelectorAll('[data-avatar-image]');
+    const avatarFallbacks = document.querySelectorAll('[data-avatar-fallback]');
     const settingsPanel = document.querySelector('[data-settings-panel]');
     const settingsClose = document.querySelector('[data-settings-close]');
     const settingsForm = document.querySelector('[data-settings-form]');
@@ -34,6 +44,7 @@
     const settingsStatus = document.querySelector('[data-settings-status]');
     const logoutButton = document.querySelector('[data-action="logout"]');
     const sourceDisabledNotice = document.querySelector('[data-popup-source-disabled]');
+    const viewportWarning = document.querySelector('[data-viewport-warning]');
     const query = new URLSearchParams(window.location.search);
     const isPopupWindow = query.get('window') === 'floating' || query.get('chat_window') === 'floating';
     const maxMessageLength = Number(config.maxMessageLength || 4000);
@@ -53,19 +64,57 @@
     const pendingOutbound = [];
     const pendingRuns = new Map();
 
+    function isMobileViewport() {
+        return window.matchMedia?.('(max-width: 640px)').matches === true;
+    }
+
+    function updateViewportWarning() {
+        if (!viewportWarning) return;
+        const tooSmallForDesktop = !isPopupWindow
+            && !isMobileViewport()
+            && (window.innerWidth < 760 || window.innerHeight < 520);
+        viewportWarning.hidden = !tooSmallForDesktop;
+        document.body.classList.toggle('viewport-too-small', tooSmallForDesktop);
+    }
+
+    function clearMaximizedBounds() {
+        if (!panel) return;
+        ['top', 'right', 'bottom', 'left', 'width', 'height'].forEach((property) => {
+            panel.style.removeProperty(property);
+        });
+    }
+
+    function updateMaximizedBounds() {
+        if (!panel || panel.dataset.chatMode !== 'maximized' || isMobileViewport()) {
+            clearMaximizedBounds();
+            return;
+        }
+
+        const bounds = dashboardMain?.getBoundingClientRect();
+        if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+
+        const margin = 8;
+        panel.style.top = `${Math.max(0, bounds.top + margin)}px`;
+        panel.style.left = `${Math.max(0, bounds.left + margin)}px`;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+        panel.style.width = `${Math.max(0, bounds.width - (margin * 2))}px`;
+        panel.style.height = `${Math.max(0, bounds.height - (margin * 2))}px`;
+    }
+
     function redirectToAuth() {
         if (redirectingToAuth) return;
         redirectingToAuth = true;
         window.clearTimeout(reconnectTimer);
         closedByUser = true;
         socket?.close(1000, 'session expired');
-        window.location.replace('/webchat/');
+        window.location.replace(`${basePath}/`);
     }
 
     async function checkSession() {
         if (redirectingToAuth) return false;
         try {
-            const response = await fetch('/webchat/api.php?action=me', {
+            const response = await fetch(`${basePath}/api.php?action=me`, {
                 credentials: 'same-origin',
                 cache: 'no-store',
                 headers: { Accept: 'application/json' },
@@ -91,6 +140,61 @@
         }
     }
 
+    function setFormStatus(element, message, error = false) {
+        if (!element) return;
+        element.textContent = message;
+        element.dataset.error = error ? 'true' : 'false';
+    }
+
+    async function readApiResponse(response) {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok !== true) throw new Error(payload.error || 'No fue posible completar la operación.');
+        return payload.data || {};
+    }
+
+    async function saveAvatar(event) {
+        event.preventDefault();
+        const file = avatarInput?.files?.[0];
+        if (!file) return setFormStatus(avatarStatus, 'Selecciona una imagen.', true);
+        if (file.size > 5 * 1024 * 1024) return setFormStatus(avatarStatus, 'La imagen supera el límite de 5 MB.', true);
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const button = avatarForm.querySelector('button[type="submit"]');
+        button?.setAttribute('disabled', 'disabled');
+        setFormStatus(avatarStatus, 'Guardando foto…');
+        try {
+            const data = await readApiResponse(await fetch(`${basePath}/api.php?action=profile/avatar`, { method: 'POST', credentials: 'same-origin', body: formData }));
+            const version = encodeURIComponent(data.user?.avatar_version || Date.now());
+            avatarImages.forEach((image) => { image.src = `${basePath}/avatar.php?v=${version}`; image.hidden = false; });
+            avatarFallbacks.forEach((fallback) => { fallback.hidden = true; });
+            setFormStatus(avatarStatus, 'Foto de perfil actualizada.');
+            avatarForm.reset();
+            if (avatarFileName) avatarFileName.textContent = 'Ningún archivo seleccionado';
+        } catch (error) {
+            setFormStatus(avatarStatus, error.message, true);
+        } finally {
+            button?.removeAttribute('disabled');
+        }
+    }
+
+    async function changePassword(event) {
+        event.preventDefault();
+        const formData = new FormData(passwordForm);
+        const payload = Object.fromEntries(formData.entries());
+        const button = passwordForm.querySelector('button[type="submit"]');
+        button?.setAttribute('disabled', 'disabled');
+        setFormStatus(passwordStatus, 'Actualizando contraseña…');
+        try {
+            await readApiResponse(await fetch(`${basePath}/api.php?action=profile/password`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload) }));
+            passwordForm.reset();
+            setFormStatus(passwordStatus, 'Contraseña actualizada. Las demás sesiones fueron cerradas.');
+        } catch (error) {
+            setFormStatus(passwordStatus, error.message, true);
+        } finally {
+            button?.removeAttribute('disabled');
+        }
+    }
+
     function messageId(message) {
         return String(message.id || message.message_id || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`);
     }
@@ -110,7 +214,7 @@
 
         const bubble = document.createElement('div');
         bubble.className = 'message__bubble';
-        bubble.textContent = String(message.text || '');
+        if (message.text) bubble.appendChild(document.createTextNode(String(message.text)));
         article.appendChild(bubble);
 
         const meta = document.createElement('span');
@@ -136,7 +240,10 @@
             const element = messageList.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
             if (element) {
                 const bubble = element.querySelector('.message__bubble');
-                if (bubble) bubble.textContent = String(message.text || '');
+                if (bubble) {
+                    const replacement = createMessageElement({ ...message, id });
+                    bubble.replaceWith(replacement.querySelector('.message__bubble'));
+                }
                 if (message.status && message.status !== 'pending') element.classList.remove('message--pending');
                 return element;
             }
@@ -255,7 +362,7 @@
         }
     }
 
-    function submitMessage(rawContent) {
+    async function submitMessage(rawContent) {
         const content = String(rawContent || '').trim();
         if (!content || content.length > maxMessageLength) return;
         if (input) input.value = '';
@@ -291,6 +398,7 @@
         panel.dataset.mode = nextMode;
         if (nextMode !== 'maximized') lastNonMaximizedMode = nextMode;
         updateModeControls(nextMode);
+        window.requestAnimationFrame(updateMaximizedBounds);
     }
 
     function showPanel(mode = 'floating') {
@@ -390,6 +498,7 @@
         sidebarToggle?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         sidebarToggle?.setAttribute('aria-label', collapsed ? 'Expandir menú' : 'Colapsar menú');
         try { window.localStorage.setItem('iaamx-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_) { /* storage is optional */ }
+        window.requestAnimationFrame(updateMaximizedBounds);
     }
 
     function setActiveSidebarItem(item) {
@@ -486,14 +595,22 @@
     async function logout() {
         logoutButton?.setAttribute('disabled', 'disabled');
         try {
-            await fetch('/webchat/api.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+            await fetch(`${basePath}/api.php?action=logout`, { method: 'POST', credentials: 'same-origin' });
         } finally {
-            window.location.href = '/webchat/';
+            window.location.href = `${basePath}/`;
         }
     }
 
     launcher?.addEventListener('click', () => showPanel());
     sidebarToggle?.addEventListener('click', () => setSidebarCollapsed(dashboardShell?.dataset.sidebarCollapsed !== 'true'));
+    window.addEventListener('resize', updateMaximizedBounds);
+    window.addEventListener('resize', updateViewportWarning);
+    if (dashboardMain && 'ResizeObserver' in window) {
+        const dashboardMainResizeObserver = new ResizeObserver(() => {
+            window.requestAnimationFrame(updateMaximizedBounds);
+        });
+        dashboardMainResizeObserver.observe(dashboardMain);
+    }
     sidebarAssistant?.addEventListener('click', (event) => { event.preventDefault(); hideProfile(); setActiveSidebarItem(sidebarAssistant); showPanel(); });
     sidebarProfile?.addEventListener('click', showProfile);
     profileClose?.addEventListener('click', () => { hideProfile(); setActiveSidebarItem(sidebarAssistant); });
@@ -507,6 +624,11 @@
         setSidebarCollapsed(settings.sidebar === 'collapsed');
         if (settingsStatus) settingsStatus.textContent = 'Ajustes guardados en este navegador.';
     });
+    avatarForm?.addEventListener('submit', saveAvatar);
+    avatarInput?.addEventListener('change', () => {
+        if (avatarFileName) avatarFileName.textContent = avatarInput.files?.[0]?.name || 'Ningún archivo seleccionado';
+    });
+    passwordForm?.addEventListener('submit', changePassword);
     document.querySelectorAll('[data-setting-help]').forEach((button) => button.addEventListener('click', () => {
         const help = document.getElementById(button.dataset.settingHelp || '');
         if (!help) return;
@@ -537,6 +659,7 @@
     applyStoredSettings();
     setConnection('idle', 'Listo para ayudarte');
     setChatMode('floating');
+    updateViewportWarning();
     void checkSession();
     window.addEventListener('pageshow', () => { void checkSession(); });
 

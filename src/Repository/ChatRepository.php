@@ -23,7 +23,15 @@ final class ChatRepository
     {
         $tokenHash = Token::hash($rawToken);
         $existing = $this->findSessionByTokenHash($tokenHash);
-        if ($existing !== null && (int) $existing['user_id'] === $userId) {
+        $existingAgentId = (string) ($existing['agent_id'] ?? '');
+        $expectedKey = $existingAgentId !== ''
+            ? $config->gatewaySessionKeyForAgent($existingAgentId, (string) $existing['public_id'])
+            : '';
+        $sessionIsCurrent = $existing !== null
+            && (int) $existing['user_id'] === $userId
+            && $expectedKey !== ''
+            && $existing['gateway_session_key'] === $expectedKey;
+        if ($sessionIsCurrent) {
             $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $config->int('WEBCHAT_SESSION_TTL', 2592000) . ' seconds')->format('Y-m-d H:i:s.u');
             $this->database->pdo()->prepare('UPDATE web_sessions SET last_seen_at = UTC_TIMESTAMP(6), expires_at = :expires_at WHERE id = :id')->execute(['expires_at' => $expiresAt, 'id' => $existing['id']]);
             $existing['expires_at'] = $expiresAt;
@@ -35,7 +43,7 @@ final class ChatRepository
         // already owned by another user; rotate it before inserting the new
         // session to avoid a unique-key failure and cross-account reuse.
         $rotatedToken = null;
-        if ($existing !== null && (int) $existing['user_id'] !== $userId) {
+        if ($existing !== null && !$sessionIsCurrent) {
             $rotatedToken = Token::random(32);
             $tokenHash = Token::hash($rotatedToken);
         }
@@ -177,10 +185,13 @@ final class ChatRepository
                    c.public_id AS conversation_public_id,
                    c.gateway_session_key,
                    u.public_id AS user_public_id,
-                   u.display_name
+                   u.display_name,
+                   rb.external_agent_id AS agent_id
             FROM web_sessions ws
             INNER JOIN conversations c ON c.id = ws.conversation_id
             INNER JOIN users u ON u.id = ws.user_id
+            LEFT JOIN logical_agents la ON la.user_id = u.id
+            LEFT JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = 'openclaw'
             WHERE ws.token_hash = :token_hash
               AND ws.expires_at > UTC_TIMESTAMP(6)
             LIMIT 1

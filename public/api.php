@@ -62,6 +62,21 @@ try {
         $user = $auth->userFromSession(auth_token());
         json_response(['ok' => true, 'authenticated' => $user !== null, 'user' => $user]);
     }
+    if ($action === 'profile/avatar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        if (!isset($_FILES['avatar']) || !is_array($_FILES['avatar'])) json_response(['ok' => false, 'error' => 'Selecciona una imagen.'], 422);
+        json_response(['ok' => true, 'data' => ['user' => $auth->updateAvatar($userId, $_FILES['avatar'])]]);
+    }
+    if ($action === 'profile/password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        $newPassword = (string) ($data['new_password'] ?? '');
+        if ($newPassword !== (string) ($data['new_password_confirmation'] ?? '')) {
+            json_response(['ok' => false, 'error' => 'Las contraseñas nuevas no coinciden.'], 422);
+        }
+        json_response(['ok' => true, 'data' => ['user' => $auth->changePassword($userId, (string) ($data['current_password'] ?? ''), $newPassword, auth_token())]]);
+    }
     if ($action === 'runtime/provision' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = $auth->userIdFromSession(auth_token());
         if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);

@@ -53,3 +53,10 @@ function webchat_h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+
+function webchat_url(string $path = ''): string
+{
+    $base = webchat_config()->publicPath();
+    $path = ltrim($path, '/');
+    return $base . ($path === '' ? '' : '/' . $path);
+}

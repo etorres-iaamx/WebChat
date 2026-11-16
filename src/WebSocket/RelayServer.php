@@ -164,6 +164,7 @@ final class RelayServer
     /** @param array<string, mixed> $session */
     private function relayLoop(Connection $browser, OpenClawClient $gateway, array $session): void
     {
+        $maxFramesPerCycle = 64;
         $browserStream = $browser->stream();
         $gatewayStream = $gateway->stream();
         $lastPingAt = microtime(true);
@@ -180,17 +181,25 @@ final class RelayServer
 
             if ($result > 0) {
                 if (in_array($browserStream, $read, true)) {
-                    while (($message = $browser->nextJsonNonBlocking()) !== null) {
+                    $frames = 0;
+                    while ($frames++ < $maxFramesPerCycle && ($message = $browser->nextJsonNonBlocking()) !== null) {
                         $active = $this->handleBrowserMessage($browser, $gateway, $session, $message);
                         if (!$active) {
                             break;
                         }
                     }
+                    if ($frames > $maxFramesPerCycle) {
+                        usleep(1000);
+                    }
                 }
 
                 if ($active && in_array($gatewayStream, $read, true)) {
-                    while (($event = $gateway->readEventNonBlocking()) !== null) {
+                    $frames = 0;
+                    while ($frames++ < $maxFramesPerCycle && ($event = $gateway->readEventNonBlocking()) !== null) {
                         $this->handleGatewayFrame($browser, $session, $event);
+                    }
+                    if ($frames > $maxFramesPerCycle) {
+                        usleep(1000);
                     }
                 }
             }
@@ -383,12 +392,13 @@ final class RelayServer
             if ($text === '') {
                 continue;
             }
-            $messages[] = [
+            $historyMessage = [
                 'id' => 'gateway-' . $index,
                 'role' => $role,
                 'text' => $text,
                 'status' => 'completed',
             ];
+            $messages[] = $historyMessage;
         }
         return $messages;
     }
