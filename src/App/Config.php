@@ -30,7 +30,7 @@ final class Config
             'OPENCLAW_BINARY' => 'openclaw',
             'OPENCLAW_PROVISIONING_ENABLED' => '0',
             'OPENCLAW_AGENT_WORKSPACE_ROOT' => '',
-            'OPENCLAW_BINDING_ENABLED' => '0',
+            'OPENCLAW_BINDING_ENABLED' => '1',
             'OPENCLAW_BINDING_LOCK' => '/tmp/webchat-openclaw-bindings.lock',
             'OPENCLAW_CHANNEL_ACCOUNT_ID' => 'default',
             'HERMES_PROVISIONING_ENABLED' => '0',

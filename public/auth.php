@@ -8,12 +8,18 @@ $authHeaders = [
 ];
 foreach ($authHeaders as $header) header($header);
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
+$pairingChannel = strtolower(trim((string) ($_GET['channel'] ?? '')));
+$pairingIdentity = trim((string) ($_GET['external_identity'] ?? ''));
+if (!in_array($pairingChannel, ['telegram', 'whatsapp'], true) || $pairingIdentity === '') {
+    $pairingChannel = '';
+    $pairingIdentity = '';
+}
 if ($auth !== null) {
     header('Location: ' . webchat_url('dashboard'));
     exit;
 }
 ?><!doctype html>
-<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>">
+<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>" data-pairing-channel="<?= webchat_h($pairingChannel) ?>" data-pairing-identity="<?= webchat_h($pairingIdentity) ?>">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261116-2')) ?>"></head>
 <body>
 <main class="auth-shell">

@@ -27,6 +27,29 @@ final class ChannelIdentityService
         return is_array($row) ? $row : null;
     }
 
+    /** @return array{action:string,agent_id?:string} */
+    public function resolveInbound(string $channel, string $externalIdentity, string $message = ''): array
+    {
+        $resolved = $this->resolve($channel, $externalIdentity);
+        if ($resolved !== null) {
+            return ['action' => 'route_to_agent', 'agent_id' => (string) ($resolved['external_agent_id'] ?? '')];
+        }
+
+        $message = trim($message);
+        if ($message !== '') {
+            $statement = $this->database->pdo()->prepare('SELECT * FROM pairing_attempts WHERE channel = :channel AND external_identity = :identity AND status IN (\'pending\', \'binding_pending\') AND expires_at > UTC_TIMESTAMP(6) ORDER BY id DESC LIMIT 1');
+            $statement->execute(['channel' => $channel, 'identity' => trim($externalIdentity)]);
+            $attempt = $statement->fetch();
+            if (is_array($attempt) && hash_equals((string) $attempt['challenge_hash'], Token::hash($message))) {
+                $this->completePairingAttempt($attempt);
+                $resolved = $this->resolve($channel, $externalIdentity);
+                return ['action' => 'route_to_agent', 'agent_id' => (string) ($resolved['external_agent_id'] ?? '')];
+            }
+        }
+
+        return ['action' => 'register'];
+    }
+
     /** @return array{pairing_id:string, challenge:string} */
     public function startPairing(int $userId, string $channel, string $externalIdentity): array
     {
@@ -46,12 +69,18 @@ final class ChannelIdentityService
         $statement->execute(['public_id' => $pairingId, 'user_id' => $userId]);
         $attempt = $statement->fetch();
         if (!is_array($attempt) || !hash_equals((string) $attempt['challenge_hash'], Token::hash(trim($challenge)))) throw new RuntimeException('El código de pairing no es válido.');
+        $this->completePairingAttempt($attempt);
+    }
+
+    /** @param array<string,mixed> $attempt */
+    private function completePairingAttempt(array $attempt): void
+    {
         $agent = $this->database->pdo()->prepare('SELECT rb.external_agent_id FROM logical_agents la INNER JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = \'openclaw\' WHERE la.user_id = :user_id LIMIT 1');
-        $agent->execute(['user_id' => $userId]);
+        $agent->execute(['user_id' => $attempt['user_id']]);
         $agentId = $agent->fetchColumn();
         if (!is_string($agentId) || $agentId === '') throw new RuntimeException('El agente OpenClaw todavía no está provisionado.');
-        $this->database->transaction(function ($pdo) use ($attempt, $userId): void {
-            $pdo->prepare('INSERT INTO channel_identities (user_id, channel, external_identity, status) VALUES (:user_id, :channel, :identity, \'binding_pending\') ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), status = \'binding_pending\'')->execute(['user_id' => $userId, 'channel' => $attempt['channel'], 'identity' => $attempt['external_identity']]);
+        $this->database->transaction(function ($pdo) use ($attempt): void {
+            $pdo->prepare('INSERT INTO channel_identities (user_id, channel, external_identity, status) VALUES (:user_id, :channel, :identity, \'binding_pending\') ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), status = \'binding_pending\'')->execute(['user_id' => $attempt['user_id'], 'channel' => $attempt['channel'], 'identity' => $attempt['external_identity']]);
             $pdo->prepare('UPDATE pairing_attempts SET status = \'binding_pending\' WHERE id = :id')->execute(['id' => $attempt['id']]);
         });
         try {

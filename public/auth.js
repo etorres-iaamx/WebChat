@@ -1,5 +1,7 @@
 (() => {
   const basePath = document.documentElement.dataset.webchatPath || '/webchat';
+  const pairingChannel = document.documentElement.dataset.pairingChannel || '';
+  const pairingIdentity = document.documentElement.dataset.pairingIdentity || '';
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
   const tabs = document.querySelector('.tabs');
@@ -38,7 +40,17 @@
     event.preventDefault();
     try {
       await submit(forms.verify, 'verify');
-      setStatus('Correo verificado. Ya puedes iniciar sesión.');
+      if (pairingChannel && pairingIdentity) {
+        const response = await fetch(`${basePath}/api.php?action=pairing/start`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({channel: pairingChannel, external_identity: pairingIdentity}) });
+        const pairing = await response.json();
+        if (response.ok && pairing.ok && pairing.data?.challenge) {
+          setStatus(`Correo verificado. Envía este código al bot de ${pairingChannel}: ${pairing.data.challenge}`);
+        } else {
+          setStatus('Correo verificado. Ya puedes iniciar sesión.');
+        }
+      } else {
+        setStatus('Correo verificado. Ya puedes iniciar sesión.');
+      }
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) { setStatus(error.message, true); }
