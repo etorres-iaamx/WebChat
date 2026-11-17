@@ -65,6 +65,8 @@ $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JS
 $avatarUrl = !empty($authUser['has_avatar'])
     ? webchat_url('avatar.php?v=' . rawurlencode((string) ($authUser['avatar_version'] ?? '')))
     : '';
+$telegramBotUrl = trim((string) $config->get('TELEGRAM_BOT_URL', ''));
+$whatsappBotUrl = trim((string) $config->get('WHATSAPP_BOT_URL', ''));
 $clientConfig = json_encode([
     'token' => $relayToken,
     'webSocketUrl' => $webSocketUrl,
@@ -162,8 +164,16 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                                     <p class="profile-form__status" data-password-status role="status" aria-live="polite"></p>
                                 </form>
                             </details>
-                            <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>Próximamente · vinculación con tu agente.</small></span><span class="profile-option__status">Próximamente</span></button>
-                            <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Próximamente · vinculación con tu agente.</small></span><span class="profile-option__status">Próximamente</span></button>
+                            <?php if ($telegramBotUrl !== ''): ?>
+                                <a class="profile-option" href="<?= webchat_h($telegramBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>Abre el bot para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
+                            <?php else: ?>
+                                <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>El bot aún no está configurado.</small></span><span class="profile-option__status">Pendiente</span></button>
+                            <?php endif; ?>
+                            <?php if ($whatsappBotUrl !== ''): ?>
+                                <a class="profile-option" href="<?= webchat_h($whatsappBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Abre WhatsApp para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
+                            <?php else: ?>
+                                <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Se habilitará cuando exista el enlace público del bot.</small></span><span class="profile-option__status">Pendiente</span></button>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="profile-panel__empty" aria-hidden="true"></div>
