@@ -121,10 +121,9 @@ final class RelayServer
             return;
         }
 
-        $gateway = new OpenClawClient($this->config);
+        $gateway = null;
         try {
-            $gateway->connect();
-            $history = $this->normalizeGatewayHistory($gateway->history((string) $session['gateway_session_key'], 50));
+            [$gateway, $history] = $this->connectGatewayWithRetry((string) $session['gateway_session_key'], (string) $session['public_id']);
 
             $browser->sendJson([
                 'type' => 'connected',
@@ -135,6 +134,7 @@ final class RelayServer
 
             $this->relayLoop($browser, $gateway, $session);
         } catch (ConnectionClosed $exception) {
+            $this->logGatewayFailure($session, 'connection', $exception);
             if (!$browser->isClosed()) {
                 try {
                     $this->sendError($browser, 'GATEWAY_UNAVAILABLE', 'El Gateway no está disponible.', null, true);
@@ -143,6 +143,7 @@ final class RelayServer
                 }
             }
         } catch (GatewayException $exception) {
+            $this->logGatewayFailure($session, 'gateway', $exception);
             try {
                 $this->sendError($browser, 'GATEWAY_UNAVAILABLE', 'El Gateway no está disponible.', null, true);
             } catch (Throwable) {
@@ -156,9 +157,48 @@ final class RelayServer
                 // The browser may have closed before the diagnostic was sent.
             }
         } finally {
-            $gateway->close();
+            $gateway?->close();
             $browser->close();
         }
+    }
+
+    /** @return array{0: OpenClawClient, 1: list<array<string,mixed>>} */
+    private function connectGatewayWithRetry(string $sessionKey, string $sessionId): array
+    {
+        $last = null;
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $gateway = new OpenClawClient($this->config);
+            try {
+                $gateway->connect();
+                $history = $this->normalizeGatewayHistory($gateway->history($sessionKey, 50));
+                return [$gateway, $history];
+            } catch (Throwable $exception) {
+                $last = $exception;
+                $this->log('Gateway bootstrap failed correlation_id=' . substr(hash('sha256', $sessionId), 0, 16)
+                    . ' phase=bootstrap attempt=' . $attempt
+                    . ' exception=' . get_class($exception)
+                    . ' code=' . ($exception instanceof GatewayException ? ($exception->codeName ?? 'unknown') : 'runtime')
+                    . ' error=' . $this->sanitizeLogMessage($exception->getMessage()));
+                $gateway->close();
+                if ($attempt < 3) usleep($attempt * 250000);
+            }
+        }
+        throw $last ?? new GatewayException('Gateway bootstrap failed', 'BOOTSTRAP_FAILED', null, true);
+    }
+
+    /** @param array<string,mixed> $session */
+    private function logGatewayFailure(array $session, string $phase, Throwable $exception): void
+    {
+        $this->log('Gateway relay failure correlation_id=' . substr(hash('sha256', (string) ($session['public_id'] ?? 'unknown')), 0, 16)
+            . ' phase=' . $phase
+            . ' exception=' . get_class($exception)
+            . ' code=' . ($exception instanceof GatewayException ? ($exception->codeName ?? 'unknown') : 'runtime')
+            . ' error=' . $this->sanitizeLogMessage($exception->getMessage()));
+    }
+
+    private function sanitizeLogMessage(string $message): string
+    {
+        return preg_replace('/(token|authorization|password|secret|code)[^,; ]*/i', '$1=[redacted]', $message) ?: '[redacted]';
     }
 
     /** @param array<string, mixed> $session */

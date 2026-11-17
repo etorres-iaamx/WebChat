@@ -312,6 +312,9 @@
         socket.addEventListener('close', () => {
             connectInProgress = false;
             socket = null;
+            // Allow the next connection to reconcile Gateway history and close
+            // runs that completed while this browser connection was unavailable.
+            gatewayHistoryLoaded = false;
             setTyping(false);
             setConnection('error', 'Desconectado');
             if (!closedByUser && !panel.hidden) {
@@ -325,6 +328,7 @@
         switch (payload.type) {
             case 'connected':
                 setConnection('connected', 'Conectado');
+                gatewayHistoryLoaded = false;
                 flushOutbound();
                 break;
             case 'history':
@@ -354,7 +358,9 @@
                     const pending = messages.get(String(payload.request_id));
                     if (pending) addMessage({ ...pending, status: 'failed' }, true);
                 }
-                addMessage({ id: `system-${Date.now()}`, role: 'system', text: payload.message || 'No fue posible procesar el mensaje.' });
+                if (!payload.retryable || !messages.has('transport-unavailable')) {
+                    addMessage({ id: payload.retryable ? 'transport-unavailable' : `system-${Date.now()}`, role: 'system', text: payload.message || 'No fue posible procesar el mensaje.' });
+                }
                 if (!payload.run_id) setTyping(false);
                 break;
             default:

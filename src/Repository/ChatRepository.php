@@ -177,6 +177,43 @@ final class ChatRepository
             ->execute(['conversation_id' => $conversationId, 'client_request_id' => $requestId]);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function findRunningRelayRequests(int $limit = 50): array
+    {
+        $statement = $this->database->pdo()->prepare(<<<'SQL'
+            SELECT rr.id, rr.conversation_id, rr.openclaw_run_id, rr.assistant_public_id,
+                   rr.created_at, c.gateway_session_key
+            FROM relay_requests rr
+            INNER JOIN conversations c ON c.id = rr.conversation_id
+            WHERE rr.state = 'running'
+            ORDER BY rr.created_at
+            LIMIT :limit
+            SQL);
+        $statement->bindValue(':limit', max(1, min(200, $limit)), PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetchAll() ?: [];
+    }
+
+    public function recoverRunningRelay(int $id, ?string $assistantPublicId = null): void
+    {
+        $assistantPublicId ??= Uuid::v4();
+        $this->database->pdo()->prepare(<<<'SQL'
+            UPDATE relay_requests
+            SET state = 'completed', assistant_public_id = COALESCE(assistant_public_id, :assistant_public_id),
+                error_code = NULL, error_message = NULL
+            WHERE id = :id AND state = 'running'
+            SQL)->execute(['id' => $id, 'assistant_public_id' => $assistantPublicId]);
+    }
+
+    public function failStaleRelay(int $id, string $message = 'La ejecución no pudo completarse.'): void
+    {
+        $this->database->pdo()->prepare(<<<'SQL'
+            UPDATE relay_requests
+            SET state = 'failed', error_code = 'RECOVERY_TIMEOUT', error_message = :message
+            WHERE id = :id AND state = 'running'
+            SQL)->execute(['id' => $id, 'message' => $message]);
+    }
+
     /** @return array<string, mixed>|null */
     private function findSessionByTokenHash(string $tokenHash): ?array
     {
