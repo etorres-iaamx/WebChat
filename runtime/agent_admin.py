@@ -17,7 +17,6 @@ class AdapterError(RuntimeError):
 
 
 def profile_value(value: str) -> str:
-    """Keep user-entered profile values on one bounded Markdown line."""
     return " ".join(value.replace("`", "' ").split())[:500]
 
 
@@ -34,51 +33,42 @@ def run(command: list[str], *, stdin: str | None = None, timeout: float = 30.0) 
     return result.stdout
 
 
-def manager_script() -> str:
-    script = os.environ.get("AGENT_ADMIN_MANAGER_SCRIPT", "")
-    if not script:
-        raise AdapterError("AGENT_ADMIN_MANAGER_SCRIPT is required")
-    return script
-
-
-def run_manager(args: list[str]) -> dict[str, object]:
+def run_json(command: list[str], *, stdin: str | None = None) -> object:
     try:
-        payload = json.loads(run([
-            os.environ.get("AGENT_ADMIN_MANAGER_PYTHON", "python3"), manager_script(), *args,
-        ]))
+        return json.loads(run(command, stdin=stdin))
     except json.JSONDecodeError as exc:
-        raise AdapterError("agent_admin_manager_invalid_json") from exc
-    if not isinstance(payload, dict) or payload.get("ok") is not True:
-        raise AdapterError("agent_admin_manager_failed")
-    results = payload.get("results")
-    if not isinstance(results, list) or not results or not isinstance(results[0], dict):
-        raise AdapterError("agent_admin_manager_invalid_response")
-    return results[0]
+        raise AdapterError("invalid_json") from exc
 
 
-def bind_peer(args: argparse.Namespace) -> dict[str, object]:
-    return run_manager([
-        "bind-peer", args.agent_id, "--channel", args.channel,
-        "--account", args.account, "--peer-id", args.peer_id,
-        "--openclaw-bin", args.openclaw_binary,
-    ])
+def openclaw_command() -> str:
+    return os.environ.get("OPENCLAW_BINARY", "openclaw")
 
 
 def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
-    result = run_manager([
-        "provision-webchat", "--agent-public-id", args.agent_public_id,
-        "--workspace-root", args.workspace_root,
-        "--display-name", args.display_name, "--email", args.email,
-        "--phone", args.phone, "--country-code", args.country_code,
-        "--openclaw-bin", args.openclaw_binary,
-        "--sandbox-backend", os.environ.get("OPENCLAW_SANDBOX_BACKEND", "ssh"),
-        "--ssh-target", os.environ.get("OPENCLAW_SSH_TARGET", ""),
-        "--ssh-workspace-root", os.environ.get("OPENCLAW_SSH_WORKSPACE_ROOT", ""),
-    ])
-    return {
-        "external_agent_id": str(result.get("external_agent_id", "")),
-        "workspace": str(result.get("workspace", "")),
-    }
+    agent_id = "webchat-" + args.agent_public_id.replace("-", "").lower()
+    root = args.workspace_root.rstrip("/")
+    workspace = f"{root}/{agent_id}"
+    payload = run_json([args.openclaw_binary, "agents", "add", agent_id, "--workspace", workspace,
+                        "--agent-dir", f"{root}/.agents/{agent_id}",
+                        "--non-interactive", "--json"])
+    external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
+    atomic_write(Path(workspace) / "AGENTS.md", (
+        "# WebChat agent isolation\n\n"
+        "This workspace belongs only to the authenticated WebChat user identified in USER.md.\n"
+        "Never claim or imply access to other users, agents, sessions, workspaces, host paths, files, tools, or Gateway internals.\n"
+        "Do not enumerate persistent agents or reveal infrastructure paths. If asked for another user's data, refuse clearly.\n"
+        "Use only the current conversation and the user's own information explicitly provided in this workspace.\n"
+        "If you cannot verify access, say so; never guess or hallucinate access.\n"
+    ))
+    atomic_write(Path(workspace) / "USER.md", (
+        "# USER\n\n"
+        f"- Nombre: {profile_value(args.display_name)}\n"
+        f"- Correo: {profile_value(args.email)}\n"
+        f"- Teléfono: {profile_value(args.phone) or 'No proporcionado'}\n"
+        f"- País/código: {profile_value(args.country_code) or 'No proporcionado'}\n"
+        f"- Identificador WebChat: {profile_value(args.agent_public_id)}\n"
+    ))
+    return {"external_agent_id": str(external), "workspace": workspace}
 
 
 def atomic_write(path: Path, content: str) -> None:
@@ -113,18 +103,12 @@ def main() -> int:
     sub = parser.add_subparsers(dest="operation", required=True)
     create = sub.add_parser("provision-openclaw")
     create.add_argument("--agent-public-id", required=True)
-    create.add_argument("--openclaw-binary", default=os.environ.get("OPENCLAW_BINARY", "openclaw"))
+    create.add_argument("--openclaw-binary", default=openclaw_command())
     create.add_argument("--workspace-root", required=True)
     create.add_argument("--display-name", required=True)
     create.add_argument("--email", required=True)
     create.add_argument("--phone", default="")
     create.add_argument("--country-code", default="")
-    bind = sub.add_parser("bind-peer")
-    bind.add_argument("--agent-id", required=True)
-    bind.add_argument("--openclaw-binary", default=os.environ.get("OPENCLAW_BINARY", "openclaw"))
-    bind.add_argument("--channel", choices=("telegram", "whatsapp"), required=True)
-    bind.add_argument("--account", default="default")
-    bind.add_argument("--peer-id", required=True)
     hermes = sub.add_parser("provision-hermes")
     hermes.add_argument("--profile", required=True)
     hermes.add_argument("--description", required=True)
@@ -134,7 +118,6 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.operation == "provision-openclaw": result = provision_openclaw(args)
-        elif args.operation == "bind-peer": result = bind_peer(args)
         else: result = provision_hermes(args)
         print(json.dumps({"ok": True, "result": result}, ensure_ascii=False))
         return 0

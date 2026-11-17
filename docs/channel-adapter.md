@@ -29,8 +29,8 @@ identificador se conservan durante el registro o inicio de sesión. Tras autenti
 la cuenta, WebChat registra el vínculo con el agente; después OpenClaw continúa con
 su pairing nativo y bloquea el acceso hasta que el código sea aprobado.
 
-El core mantiene por separado la asociación entre `canal + identificador externo` y
-el agente correspondiente. Aprobar el pairing de OpenClaw autoriza al remitente a
+El core de la aplicación mantiene la asociación entre `canal + identificador externo`
+y el agente correspondiente. Aprobar el pairing de OpenClaw autoriza al remitente a
 hablar con el bot; no crea un agente ni sustituye el routing del core.
 
 La integración específica con el Gateway se conectará cuando el canal real esté activo.
