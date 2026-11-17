@@ -102,6 +102,10 @@ try {
     if ($exception instanceof \Webchat\Auth\UserAlreadyRegisteredException) {
         json_response(['ok' => false, 'error' => $exception->getMessage()], 409);
     }
+    $correlationId = bin2hex(random_bytes(8));
+    $safeError = preg_replace('/\s+/', ' ', $exception->getMessage()) ?: get_class($exception);
+    $safeError = preg_replace('/(token|password|secret|authorization|code)[=: ]+[^\s,;]+/i', '$1=[redacted]', $safeError) ?: $safeError;
+    error_log(sprintf('WebChat request failed correlation_id=%s action=%s exception=%s error=%s', $correlationId, $action, get_class($exception), mb_substr($safeError, 0, 500)));
     $message = webchat_config()->get('APP_ENV', 'local') === 'production' ? 'No fue posible completar la operación.' : $exception->getMessage();
     json_response(['ok' => false, 'error' => $message], 400);
 }

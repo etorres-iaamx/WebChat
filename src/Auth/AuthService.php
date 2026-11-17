@@ -105,10 +105,15 @@ final class AuthService
             $pdo->prepare('UPDATE verification_codes SET used_at = UTC_TIMESTAMP(6) WHERE id = :id')->execute(['id' => $verification['id']]);
             $pdo->prepare('UPDATE users SET status = \'active\', email_verified_at = UTC_TIMESTAMP(6) WHERE id = :id')->execute(['id' => $user['id']]);
             $agent = $this->ensureLogicalAgent($pdo, (int) $user['id'], (string) $user['display_name']);
-            $this->queueProvisioning($pdo, (int) $user['id']);
             return ['user' => $this->findUserByIdWithPdo($pdo, (int) $user['id']) ?? $user, 'agent_created' => $agent];
         });
         $provisioningPending = false;
+        try {
+            $this->queueProvisioningForUser((int) $user['id']);
+        } catch (\Throwable $exception) {
+            $provisioningPending = true;
+            $this->recordProvisioningFailure((int) $user['id'], $exception);
+        }
         try {
             $this->provisionRuntimes((int) $user['id']);
         } catch (\Throwable $exception) {
@@ -179,20 +184,31 @@ final class AuthService
         }
     }
 
+    private function queueProvisioningForUser(int $userId): void
+    {
+        $this->database->transaction(function (PDO $pdo) use ($userId): void {
+            $this->queueProvisioning($pdo, $userId);
+        });
+    }
+
     private function recordProvisioningFailure(int $userId, \Throwable $exception, ?string $correlationId = null, ?int $jobId = null): void
     {
         $correlationId ??= Uuid::v4();
         $safeError = $this->redactError($exception->getMessage() ?: get_class($exception));
         error_log(sprintf('WebChat provisioning failed correlation_id=%s user_id=%d exception=%s error=%s', $correlationId, $userId, get_class($exception), $safeError));
-        if ($jobId !== null) {
-            $attempts = (int) ($this->database->pdo()->query('SELECT attempts FROM runtime_provision_jobs WHERE id = ' . (int) $jobId)->fetchColumn() ?: 1);
-            $delay = min(3600, 10 * (2 ** min(8, max(0, $attempts - 1))));
-            $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = IF(attempts >= 8, \'failed\', \'pending\'), available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL ' . $delay . ' SECOND), last_error = :last_error WHERE id = :id')
-                ->execute(['last_error' => $safeError, 'id' => $jobId]);
-            return;
+        try {
+            if ($jobId !== null) {
+                $attempts = (int) ($this->database->pdo()->query('SELECT attempts FROM runtime_provision_jobs WHERE id = ' . (int) $jobId)->fetchColumn() ?: 1);
+                $delay = min(3600, 10 * (2 ** min(8, max(0, $attempts - 1))));
+                $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = IF(attempts >= 8, \'failed\', \'pending\'), available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL ' . $delay . ' SECOND), last_error = :last_error WHERE id = :id')
+                    ->execute(['last_error' => $safeError, 'id' => $jobId]);
+                return;
+            }
+            $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'pending\', available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 10 SECOND), last_error = :last_error WHERE user_id = :user_id AND status <> \'completed\'')
+                ->execute(['last_error' => $safeError, 'user_id' => $userId]);
+        } catch (\Throwable $loggingException) {
+            error_log(sprintf('WebChat provisioning state update failed correlation_id=%s user_id=%d exception=%s', $correlationId, $userId, get_class($loggingException)));
         }
-        $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'pending\', available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 10 SECOND), last_error = :last_error WHERE user_id = :user_id AND status <> \'completed\'')
-            ->execute(['last_error' => $safeError, 'user_id' => $userId]);
     }
 
     private function redactError(string $message): string
