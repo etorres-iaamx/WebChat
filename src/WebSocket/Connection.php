@@ -293,14 +293,19 @@ final class Connection
             throw new ConnectionClosed('WebSocket stream ended');
         }
         $chunk = fread($this->stream, 65536);
-        if ($chunk === false || ($nonBlocking && $chunk === '') || ($chunk === '' && feof($this->stream)) || feof($this->stream)) {
+        if ($chunk === false) {
             throw new ConnectionClosed('WebSocket stream ended');
         }
-        // Non-blocking sockets may return an empty chunk while no frame is
-        // available yet. That is not EOF; the next poll should try again.
-        if ($chunk !== '') {
-            $this->buffer .= $chunk;
+        if ($chunk === '') {
+            if (feof($this->stream)) {
+                throw new ConnectionClosed('WebSocket stream ended');
+            }
+            // A non-blocking read can return no bytes without EOF (for
+            // example after stream_select wakes for another socket event).
+            // Preserve the connection and let the next poll try again.
+            return;
         }
+        $this->buffer .= $chunk;
     }
 
     private function waitForReadable(?float $timeoutSeconds): bool

@@ -96,6 +96,14 @@ final class OpenClawClient
         return $this->connection->stream();
     }
 
+    public function sendPing(string $payload = 'webchat'): void
+    {
+        if ($this->connection === null) {
+            throw new RuntimeException('Gateway client is not connected');
+        }
+        $this->connection->sendPing($payload);
+    }
+
     /** @return list<array<string, mixed>> */
     public function drainPendingEvents(): array
     {

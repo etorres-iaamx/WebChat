@@ -234,12 +234,20 @@ final class RelayServer
                 }
 
                 if ($active && in_array($gatewayStream, $read, true)) {
-                    $frames = 0;
-                    while ($frames++ < $maxFramesPerCycle && ($event = $gateway->readEventNonBlocking()) !== null) {
-                        $this->handleGatewayFrame($browser, $session, $event);
-                    }
-                    if ($frames > $maxFramesPerCycle) {
-                        usleep(1000);
+                    try {
+                        $frames = 0;
+                        while ($frames++ < $maxFramesPerCycle && ($event = $gateway->readEventNonBlocking()) !== null) {
+                            $this->handleGatewayFrame($browser, $session, $event);
+                        }
+                        if ($frames > $maxFramesPerCycle) {
+                            usleep(1000);
+                        }
+                    } catch (ConnectionClosed $exception) {
+                        $this->logGatewayFailure($session, 'connection_lost', $exception);
+                        [$gateway, $history] = $this->reconnectGateway($gateway, (string) $session['gateway_session_key'], (string) $session['public_id']);
+                        $gatewayStream = $gateway->stream();
+                        $browser->sendJson(['type' => 'gateway.reconnected']);
+                        $browser->sendJson(['type' => 'history', 'messages' => $history, 'reconcile' => true]);
                     }
                 }
             }
@@ -250,9 +258,17 @@ final class RelayServer
 
             if (microtime(true) - $lastPingAt >= 25.0) {
                 $browser->sendPing('iaamx');
+                $gateway->sendPing('webchat');
                 $lastPingAt = microtime(true);
             }
         }
+    }
+
+    /** @return array{0: OpenClawClient, 1: list<array<string,mixed>>} */
+    private function reconnectGateway(OpenClawClient $previous, string $sessionKey, string $sessionId): array
+    {
+        $previous->close();
+        return $this->connectGatewayWithRetry($sessionKey, $sessionId);
     }
 
     /** @param array<string, mixed> $session @param array<string, mixed> $message */
@@ -338,10 +354,10 @@ final class RelayServer
         }
 
         $payload = is_array($frame['payload'] ?? null) ? $frame['payload'] : [];
+        $runId = is_string($payload['runId'] ?? null) ? $payload['runId'] : '';
         if (($payload['sessionKey'] ?? '') !== ($session['gateway_session_key'] ?? '')) {
             return;
         }
-        $runId = is_string($payload['runId'] ?? null) ? $payload['runId'] : '';
         if ($runId === '') {
             return;
         }

@@ -52,6 +52,7 @@
 
     let socket = null;
     let reconnectTimer = null;
+    let reconnectAttempts = 0;
     let connectInProgress = false;
     let closedByUser = false;
     let gatewayHistoryLoaded = false;
@@ -62,6 +63,7 @@
     let sourceModeBeforePopup = 'floating';
     const messages = new Map();
     const pendingOutbound = [];
+    const inFlightOutbound = new Map();
     const pendingRuns = new Map();
 
     function isMobileViewport() {
@@ -272,6 +274,9 @@
     }
 
     function sendRaw(payload) {
+        if (payload?.type === 'message.create' && payload.request_id) {
+            inFlightOutbound.set(String(payload.request_id), payload);
+        }
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(payload));
             return true;
@@ -282,8 +287,24 @@
 
     function flushOutbound() {
         while (pendingOutbound.length > 0 && socket?.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(pendingOutbound.shift()));
+            const payload = pendingOutbound.shift();
+            socket.send(JSON.stringify(payload));
         }
+    }
+
+    function requeueInFlight() {
+        const queued = new Set(pendingOutbound.map((payload) => String(payload.request_id || '')));
+        inFlightOutbound.forEach((payload, requestId) => {
+            if (!queued.has(String(requestId))) pendingOutbound.unshift(payload);
+        });
+    }
+
+    function scheduleReconnect() {
+        if (closedByUser || panel?.hidden) return;
+        window.clearTimeout(reconnectTimer);
+        const exponent = Math.min(reconnectAttempts++, 5);
+        const delay = Math.min(30000, 1000 * (2 ** exponent)) + Math.floor(Math.random() * 500);
+        reconnectTimer = window.setTimeout(connect, delay);
     }
 
     function connect() {
@@ -296,11 +317,13 @@
         } catch (error) {
             connectInProgress = false;
             setConnection('error', 'No se pudo conectar');
+            scheduleReconnect();
             return;
         }
 
         socket.addEventListener('open', () => {
             connectInProgress = false;
+            reconnectAttempts = 0;
             sendRaw({ type: 'connect', token: config.token });
         });
         socket.addEventListener('message', (event) => {
@@ -311,16 +334,14 @@
         socket.addEventListener('error', () => setConnection('error', 'Servicio no disponible'));
         socket.addEventListener('close', () => {
             connectInProgress = false;
+            requeueInFlight();
             socket = null;
             // Allow the next connection to reconcile Gateway history and close
             // runs that completed while this browser connection was unavailable.
             gatewayHistoryLoaded = false;
             setTyping(false);
             setConnection('error', 'Desconectado');
-            if (!closedByUser && !panel.hidden) {
-                window.clearTimeout(reconnectTimer);
-                reconnectTimer = window.setTimeout(connect, 2500);
-            }
+            scheduleReconnect();
         });
     }
 
@@ -332,16 +353,20 @@
                 flushOutbound();
                 break;
             case 'history':
-                if (Array.isArray(payload.messages) && !gatewayHistoryLoaded) {
+                if (Array.isArray(payload.messages) && (!gatewayHistoryLoaded || payload.reconcile === true)) {
                     gatewayHistoryLoaded = true;
                     const localMessages = [...messages.values()].filter((message) => String(message.id).startsWith('local-') || message.status === 'pending');
                     renderHistory([...payload.messages, ...localMessages]);
                 }
                 break;
+            case 'gateway.reconnected':
+                setConnection('connected', 'Conectado');
+                break;
             case 'typing':
                 setTyping(Boolean(payload.on));
                 break;
             case 'message.accepted':
+                if (payload.request_id) inFlightOutbound.delete(String(payload.request_id));
                 if (payload.run_id && payload.assistant_message_id) pendingRuns.set(String(payload.run_id), String(payload.assistant_message_id));
                 setTyping(true);
                 break;
@@ -354,6 +379,12 @@
                 setTyping(false);
                 break;
             case 'error':
+                if (payload.request_id) {
+                    inFlightOutbound.delete(String(payload.request_id));
+                    for (let index = pendingOutbound.length - 1; index >= 0; index--) {
+                        if (String(pendingOutbound[index].request_id || '') === String(payload.request_id)) pendingOutbound.splice(index, 1);
+                    }
+                }
                 if (payload.request_id) {
                     const pending = messages.get(String(payload.request_id));
                     if (pending) addMessage({ ...pending, status: 'failed' }, true);
