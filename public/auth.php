@@ -23,7 +23,7 @@ if ($auth !== null) {
 }
 ?><!doctype html>
 <html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>" data-onboarding-intent="<?= webchat_h($intent) ?>">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261116-2')) ?>"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261117-1')) ?>"></head>
 <body>
 <main class="auth-shell">
   <section class="auth-card" aria-labelledby="title">
@@ -76,5 +76,5 @@ if ($auth !== null) {
     <p class="status" data-status role="status"></p>
   </section>
 </main>
-<script src="<?= webchat_h(webchat_url('auth.js?v=20261116-2')) ?>" defer></script>
+<script src="<?= webchat_h(webchat_url('auth.js?v=20261117-1')) ?>" defer></script>
 </body></html>

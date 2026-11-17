@@ -7,6 +7,12 @@
   const tabButtons = [...document.querySelectorAll('[data-tab]')];
   let registrationStarted = false;
   const setStatus = (text, error = false) => { status.textContent = text; status.dataset.error = error ? 'true' : 'false'; };
+  const setFormBusy = (form, busy) => {
+    if (!form) return;
+    form.dataset.busy = busy ? 'true' : 'false';
+    form.setAttribute('aria-busy', busy ? 'true' : 'false');
+    form.querySelectorAll('button, input, select').forEach((control) => { control.disabled = busy; });
+  };
   tabButtons.forEach((button) => button.addEventListener('click', () => {
     if (registrationStarted && button.dataset.tab === 'register') return;
     document.querySelectorAll('[data-tab]').forEach((item) => item.classList.toggle('is-active', item === button));
@@ -48,6 +54,8 @@
   });
   forms.verify?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    setFormBusy(forms.verify, true);
+    setStatus('Verificando tu correo…');
     try {
       await submit(forms.verify, 'verify');
       if (onboardingIntent) {
@@ -58,6 +66,9 @@
       setStatus('Correo verificado. Ya puedes iniciar sesión.');
       forms.verify.hidden = true;
       forms.login.hidden = false;
-    } catch (error) { setStatus(error.message, true); }
+    } catch (error) {
+      setFormBusy(forms.verify, false);
+      setStatus(error.message, true);
+    }
   });
 })();
