@@ -12,8 +12,8 @@ use Webchat\App\Config;
 use Webchat\App\Database;
 use Webchat\App\Token;
 use Webchat\App\Uuid;
-use Webchat\Runtime\OpenClawProvisioner;
 use Webchat\Runtime\HermesProvisioner;
+use Webchat\Core\CoreAgentClient;
 
 final class AuthService
 {
@@ -132,12 +132,12 @@ final class AuthService
         $binding->execute(['agent_id' => $agent['id']]);
         $existing = $binding->fetch();
         if (is_array($existing) && $existing['external_agent_id']) return;
-        $resource = (new OpenClawProvisioner($this->config))->provision(
-            (string) $agent['public_id'], (string) $agent['display_name'], (string) $agent['email'],
-            (string) ($agent['phone'] ?? ''), (string) ($agent['country_code'] ?? ''),
-        );
+        $resource = (new CoreAgentClient($this->config))->provision($agent, 'webchat:' . (string) $agent['public_id']);
+        if ($resource['status'] !== 'active') {
+            throw new RuntimeException('El core aún no terminó de crear el agente.');
+        }
         $this->database->pdo()->prepare('INSERT INTO runtime_bindings (logical_agent_id, runtime, external_agent_id, workspace_ref, status) VALUES (:agent_id, \'openclaw\', :external_id, :workspace, \'active\') ON DUPLICATE KEY UPDATE external_agent_id = VALUES(external_agent_id), workspace_ref = VALUES(workspace_ref), status = \'active\'')
-            ->execute(['agent_id' => $agent['id'], 'external_id' => $resource['external_agent_id'], 'workspace' => $resource['workspace']]);
+            ->execute(['agent_id' => $agent['id'], 'external_id' => $resource['agent_id'], 'workspace' => $resource['workspace_ref']]);
         $this->database->pdo()->prepare('UPDATE logical_agents SET status = \'active\' WHERE id = :id')->execute(['id' => $agent['id']]);
     }
 
