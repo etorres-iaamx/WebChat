@@ -49,12 +49,6 @@ function webchat_channels(): Webchat\Channels\ChannelIdentityService
     return $channels ??= new Webchat\Channels\ChannelIdentityService(webchat_db());
 }
 
-function webchat_core(): Webchat\Core\CoreAgentClient
-{
-    static $client;
-    return $client ??= new Webchat\Core\CoreAgentClient(webchat_config());
-}
-
 function webchat_h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

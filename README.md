@@ -28,13 +28,15 @@ correlación técnica. Telegram y WhatsApp usan identidades externas y el pairin
 - `channel_identities` conserva únicamente el vínculo confirmado; WebChat no genera códigos de pairing.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
-- `OPENCLAW_PROVISIONING_ENABLED=1` activa la solicitud al core mediante `AGENT_CORE_URL`.
-- WebChat envía los datos verificados del perfil y una clave idempotente; no ejecuta
-  OpenClaw, no crea workspaces y no escribe archivos de contexto.
+- `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adaptador interno del core.
+- Al crear el agente, el adapter genera su `USER.md` con los datos verificados del
+  perfil WebChat (nombre, correo, teléfono, país e identificador público); nunca copia
+  contraseñas ni códigos de verificación.
 
 El WebChat solo orquesta identidad, ruteo y sesiones. El pairing nativo de OpenClaw se
 aprueba mediante `webapp2-etorres`; el core conserva la asociación del remitente con
-el agente y devuelve la referencia creada.
+el agente. `runtime/agent_admin.py` es el adaptador interno del core: crea el agente
+con la CLI oficial, escribe únicamente su contexto y persiste el binding resultante.
 
 ### Aislamiento sin Docker
 
@@ -48,8 +50,7 @@ Para activar provisioning en un entorno de pruebas, define un workspace permitid
 
 ```dotenv
 OPENCLAW_PROVISIONING_ENABLED=1
-AGENT_CORE_URL=http://127.0.0.1:8084
-AGENT_CORE_TOKEN=the-shared-secret-configured-in-webapp4
+OPENCLAW_AGENT_WORKSPACE_ROOT=/var/lib/openclaw/workspaces
 ```
 
 Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_ENABLED=1`
