@@ -19,20 +19,20 @@
     Object.entries(forms).forEach(([key, form]) => { form.hidden = key !== button.dataset.tab; });
     setStatus('');
   }));
-  async function submit(form, action) {
-    const payload = Object.fromEntries(new FormData(form).entries());
+  async function submit(form, action, payload = null) {
+    payload ??= Object.fromEntries(new FormData(form).entries());
     const response = await fetch(`${basePath}/api.php?action=${action}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     const body = await response.json();
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
-  async function provisionRuntimeWithRetry() {
+  async function provisionRuntimeWithRetry(payload) {
     const delays = [0, 1000, 3000];
     for (let attempt = 0; attempt < delays.length; attempt += 1) {
       if (delays[attempt] > 0) await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
       setStatus('Preparando tu espacio…');
       try {
-        await submit(forms.verify, 'runtime/provision');
+        await submit(forms.verify, 'runtime/provision', payload);
         return true;
       } catch (_) {
         // The backend records the technical failure; the user only sees the final generic state.
@@ -68,11 +68,14 @@
   });
   forms.verify?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    // FormData omits disabled controls. Capture the complete request before
+    // locking the form so the hidden email remains part of every request.
+    const verificationPayload = Object.fromEntries(new FormData(forms.verify).entries());
     setFormBusy(forms.verify, true);
     setStatus('Verificando tu correo…');
     try {
-      const verification = await submit(forms.verify, 'verify');
-      if (verification.provisioning_pending && !(await provisionRuntimeWithRetry())) {
+      const verification = await submit(forms.verify, 'verify', verificationPayload);
+      if (verification.provisioning_pending && !(await provisionRuntimeWithRetry(verificationPayload))) {
         setFormBusy(forms.verify, false);
         setStatus('No fue posible completar la operación. Intenta nuevamente más tarde.', true);
         return;
