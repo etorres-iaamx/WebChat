@@ -26,6 +26,20 @@
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
+  async function provisionRuntimeWithRetry() {
+    const delays = [0, 1000, 3000];
+    for (let attempt = 0; attempt < delays.length; attempt += 1) {
+      if (delays[attempt] > 0) await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+      setStatus('Preparando tu espacio…');
+      try {
+        await submit(forms.verify, 'runtime/provision');
+        return true;
+      } catch (_) {
+        // The backend records the technical failure; the user only sees the final generic state.
+      }
+    }
+    return false;
+  }
   forms.login?.addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -57,7 +71,12 @@
     setFormBusy(forms.verify, true);
     setStatus('Verificando tu correo…');
     try {
-      await submit(forms.verify, 'verify');
+      const verification = await submit(forms.verify, 'verify');
+      if (verification.provisioning_pending && !(await provisionRuntimeWithRetry())) {
+        setFormBusy(forms.verify, false);
+        setStatus('No fue posible completar la operación. Intenta nuevamente más tarde.', true);
+        return;
+      }
       if (onboardingIntent) {
         const linkResponse = await fetch(`${basePath}/api.php?action=channel/link`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({intent: onboardingIntent}) });
         const link = await linkResponse.json();

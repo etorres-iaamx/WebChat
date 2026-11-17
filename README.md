@@ -169,6 +169,17 @@ esas tablas no forman parte del runtime actual. Esa migración requiere ejecutar
 una vez con una cuenta DBA, porque el usuario de la aplicación no tiene permiso
 `DROP`; después debe registrarse como aplicada en `schema_migrations`.
 
+Los provisionings pendientes se guardan en `runtime_provision_jobs` y pueden procesarse
+con un worker periódico. En producción, prográmalo con el supervisor disponible, por
+ejemplo cada minuto:
+
+```bash
+php bin/provision-pending.php 10
+```
+
+El worker es seguro para reintentar: los bindings existentes se reutilizan y los errores
+técnicos se conservan solo en logs y en el estado interno del job.
+
 ## OpenClaw Gateway
 
 El relay usa el protocolo WebSocket v4 del Gateway:

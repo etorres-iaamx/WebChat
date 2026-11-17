@@ -81,7 +81,12 @@ try {
     if ($action === 'runtime/provision' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = $auth->userIdFromSession(auth_token());
         if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
-        $auth->provisionRuntimesForUser($userId);
+        try {
+            $auth->provisionRuntimesForUser($userId);
+        } catch (Throwable $exception) {
+            error_log('WebChat runtime retry failed user_id=' . $userId . ' exception=' . get_class($exception));
+            json_response(['ok' => false, 'error' => 'No fue posible completar la operación. Intenta nuevamente más tarde.'], 503);
+        }
         json_response(['ok' => true]);
     }
     if ($action === 'channel/link' && $_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -87,7 +87,7 @@ final class AuthService
         return ['user' => $this->publicUser($user), 'session_token' => $session['token'], 'session_ttl' => $session['ttl'], 'persistent' => false, 'verification_code' => $this->config->bool('APP_ENV_LOCAL_SHOW_CODES', false) ? $code : null];
     }
 
-    /** @return array{user: array<string,mixed>, agent_created: bool} */
+    /** @return array{user: array<string,mixed>, agent_created: bool, provisioning_pending: bool} */
     public function verify(string $email, string $code): array
     {
         $user = $this->findUserByEmail(strtolower(trim($email)));
@@ -105,21 +105,101 @@ final class AuthService
             $pdo->prepare('UPDATE verification_codes SET used_at = UTC_TIMESTAMP(6) WHERE id = :id')->execute(['id' => $verification['id']]);
             $pdo->prepare('UPDATE users SET status = \'active\', email_verified_at = UTC_TIMESTAMP(6) WHERE id = :id')->execute(['id' => $user['id']]);
             $agent = $this->ensureLogicalAgent($pdo, (int) $user['id'], (string) $user['display_name']);
+            $this->queueProvisioning($pdo, (int) $user['id']);
             return ['user' => $this->findUserByIdWithPdo($pdo, (int) $user['id']) ?? $user, 'agent_created' => $agent];
         });
-        $this->provisionRuntimes((int) $user['id']);
-        return ['user' => $this->publicUser($result['user']), 'agent_created' => $result['agent_created']];
+        $provisioningPending = false;
+        try {
+            $this->provisionRuntimes((int) $user['id']);
+        } catch (\Throwable $exception) {
+            $provisioningPending = true;
+            $this->recordProvisioningFailure((int) $user['id'], $exception);
+        }
+        return ['user' => $this->publicUser($result['user']), 'agent_created' => $result['agent_created'], 'provisioning_pending' => $provisioningPending];
     }
 
     public function provisionRuntimesForUser(int $userId): void
     {
-        $this->provisionRuntimes($userId);
+        try {
+            $this->provisionRuntimes($userId);
+        } catch (\Throwable $exception) {
+            $this->recordProvisioningFailure($userId, $exception);
+            throw $exception;
+        }
+    }
+
+    public function processPendingProvisioningJobs(int $limit = 10): int
+    {
+        $statement = $this->database->pdo()->prepare('SELECT id, user_id, attempts, correlation_id FROM runtime_provision_jobs WHERE status IN (\'pending\', \'failed\') AND available_at <= UTC_TIMESTAMP(6) ORDER BY id LIMIT :job_limit');
+        $statement->bindValue('job_limit', max(1, min(100, $limit)), PDO::PARAM_INT);
+        $statement->execute();
+        $jobs = $statement->fetchAll();
+        $processed = 0;
+        foreach ($jobs as $job) {
+            $claim = $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'running\', attempts = attempts + 1 WHERE id = :id AND status IN (\'pending\', \'failed\')');
+            $claim->execute(['id' => $job['id']]);
+            if ($claim->rowCount() !== 1) continue;
+            try {
+                $this->provisionRuntimes((int) $job['user_id']);
+                $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'completed\', last_error = NULL WHERE id = :id')->execute(['id' => $job['id']]);
+            } catch (\Throwable $exception) {
+                $this->recordProvisioningFailure((int) $job['user_id'], $exception, (string) $job['correlation_id'], (int) $job['id']);
+            }
+            $processed++;
+        }
+        return $processed;
     }
 
     private function provisionRuntimes(int $userId): void
     {
-        if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) $this->provisionAgent($userId);
-        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) $this->provisionHermes($userId);
+        if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) {
+            $this->provisionAgent($userId);
+            $this->markProvisioningCompleted($userId, 'openclaw');
+        }
+        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) {
+            $this->provisionHermes($userId);
+            $this->markProvisioningCompleted($userId, 'hermes');
+        }
+    }
+
+    private function markProvisioningCompleted(int $userId, string $runtime): void
+    {
+        $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'completed\', last_error = NULL WHERE user_id = :user_id AND runtime = :runtime')
+            ->execute(['user_id' => $userId, 'runtime' => $runtime]);
+    }
+
+    private function queueProvisioning(PDO $pdo, int $userId): void
+    {
+        $runtimes = [];
+        if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) $runtimes[] = 'openclaw';
+        if ($this->config->bool('HERMES_PROVISIONING_ENABLED', false)) $runtimes[] = 'hermes';
+        foreach ($runtimes as $runtime) {
+            $pdo->prepare('INSERT INTO runtime_provision_jobs (user_id, runtime, status, correlation_id) VALUES (:user_id, :runtime, \'pending\', :correlation_id) ON DUPLICATE KEY UPDATE status = IF(status = \'completed\', status, \'pending\'), available_at = UTC_TIMESTAMP(6), last_error = NULL, correlation_id = VALUES(correlation_id)')
+                ->execute(['user_id' => $userId, 'runtime' => $runtime, 'correlation_id' => Uuid::v4()]);
+        }
+    }
+
+    private function recordProvisioningFailure(int $userId, \Throwable $exception, ?string $correlationId = null, ?int $jobId = null): void
+    {
+        $correlationId ??= Uuid::v4();
+        $safeError = $this->redactError($exception->getMessage() ?: get_class($exception));
+        error_log(sprintf('WebChat provisioning failed correlation_id=%s user_id=%d exception=%s error=%s', $correlationId, $userId, get_class($exception), $safeError));
+        if ($jobId !== null) {
+            $attempts = (int) ($this->database->pdo()->query('SELECT attempts FROM runtime_provision_jobs WHERE id = ' . (int) $jobId)->fetchColumn() ?: 1);
+            $delay = min(3600, 10 * (2 ** min(8, max(0, $attempts - 1))));
+            $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = IF(attempts >= 8, \'failed\', \'pending\'), available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL ' . $delay . ' SECOND), last_error = :last_error WHERE id = :id')
+                ->execute(['last_error' => $safeError, 'id' => $jobId]);
+            return;
+        }
+        $this->database->pdo()->prepare('UPDATE runtime_provision_jobs SET status = \'pending\', available_at = DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 10 SECOND), last_error = :last_error WHERE user_id = :user_id AND status <> \'completed\'')
+            ->execute(['last_error' => $safeError, 'user_id' => $userId]);
+    }
+
+    private function redactError(string $message): string
+    {
+        $message = preg_replace('/\s+/', ' ', $message) ?: 'Unknown provisioning failure';
+        $message = preg_replace('/(token|password|secret|authorization|code)[=: ]+[^\s,;]+/i', '$1=[redacted]', $message) ?: $message;
+        return mb_substr($message, 0, 500);
     }
 
     private function provisionAgent(int $userId): void
