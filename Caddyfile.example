@@ -12,6 +12,12 @@
 		reverse_proxy 127.0.0.1:8082
 	}
 
+	# The channel resolver is internal-only; the plugin calls the PHP listener directly.
+	@webchat_channel_resolver path /webchat/channel.php
+	handle @webchat_channel_resolver {
+		respond 404
+	}
+
 	@webchat_root path /webchat /webchat/
 	handle @webchat_root {
 		rewrite * /auth.php

@@ -448,15 +448,30 @@ final class RelayServer
             if ($text === '') {
                 continue;
             }
+            $metadata = is_array($message['__openclaw'] ?? null) ? $message['__openclaw'] : [];
+            $runId = is_string($metadata['runId'] ?? null) ? trim($metadata['runId']) : '';
+            $requestId = $this->requestIdFromRunId($runId);
+            $stableId = $role === 'user' && $requestId !== ''
+                ? $requestId
+                : ($runId !== '' ? 'gateway-' . hash('sha256', $role . ':' . $runId) : 'gateway-' . $index);
             $historyMessage = [
-                'id' => 'gateway-' . $index,
+                'id' => $stableId,
                 'role' => $role,
                 'text' => $text,
                 'status' => 'completed',
             ];
+            if ($runId !== '') $historyMessage['run_id'] = $runId;
+            if ($role === 'user' && $requestId !== '') $historyMessage['request_id'] = $requestId;
             $messages[] = $historyMessage;
         }
         return $messages;
+    }
+
+    private function requestIdFromRunId(string $runId): string
+    {
+        if (!str_starts_with($runId, 'webchat:')) return '';
+        $requestId = substr($runId, (int) strrpos($runId, ':') + 1);
+        return preg_match('/^[A-Za-z0-9_-]{1,80}$/', $requestId) === 1 ? $requestId : '';
     }
 
     private function extractText(mixed $value): string

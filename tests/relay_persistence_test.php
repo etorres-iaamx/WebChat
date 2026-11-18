@@ -14,6 +14,8 @@ foreach ([
     "'type' => 'gateway.reconnected'",
     "'type' => 'history', 'messages' => \$history, 'reconcile' => true",
     '$gateway->sendPing(\'webchat\');',
+    "'request_id' => \$requestId",
+    "private function requestIdFromRunId(",
 ] as $fragment) {
     if (strpos($relay, $fragment) === false) {
         throw new RuntimeException('Missing persistent Gateway connection safeguard: ' . $fragment);

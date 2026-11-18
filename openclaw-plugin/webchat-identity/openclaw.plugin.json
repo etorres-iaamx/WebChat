@@ -10,6 +10,8 @@
     "additionalProperties": false,
     "properties": {
       "resolveUrl": {"type": "string", "format": "uri"},
+      "resolveSecret": {"type": "string", "minLength": 16},
+      "adminIdentities": {"type": "array", "items": {"type": "string", "minLength": 3}},
       "timeoutMs": {"type": "integer", "minimum": 250, "maximum": 10000}
     }
   }

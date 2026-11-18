@@ -19,7 +19,11 @@ Configurar la URL local que el Gateway pueda alcanzar:
 
 ```bash
 openclaw config set plugins.entries.webchat-identity.config.resolveUrl \
-  http://127.0.0.1:8080/channel.php
+  http://127.0.0.1:8082/channel.php
+
+# Opcional pero recomendado si el resolver queda expuesto fuera de loopback.
+openclaw config set plugins.entries.webchat-identity.config.resolveSecret \
+  '<secreto-compartido-de-al-menos-16-caracteres>'
 ```
 
 Después validar y reiniciar el Gateway:

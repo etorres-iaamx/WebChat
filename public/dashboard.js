@@ -201,6 +201,14 @@
         return String(message.id || message.message_id || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`);
     }
 
+    function messageIdentity(message) {
+        if (message?.role === 'user' && message?.request_id) return `request:${String(message.request_id)}`;
+        if (message?.role === 'assistant' && message?.run_id) return `run:${String(message.run_id)}`;
+        if (message?.request_id) return `request:${String(message.request_id)}`;
+        if (message?.run_id) return `run:${String(message.run_id)}`;
+        return `id:${messageId(message)}`;
+    }
+
     function formatTime(value) {
         if (!value) return '';
         const date = new Date(String(value).replace(' ', 'T') + (String(value).includes('Z') ? '' : 'Z'));
@@ -263,6 +271,26 @@
         messages.clear();
         history.filter((message) => message && typeof message === 'object').forEach((message) => addMessage(message, true));
         syncWelcome();
+    }
+
+    function reconcileHistory(history) {
+        const gatewayMessages = history.filter((message) => message && typeof message === 'object');
+        const gatewayIdentities = new Set(gatewayMessages.map(messageIdentity));
+        const existingByIdentity = new Map([...messages.values()].map((message) => [messageIdentity(message), message]));
+        const reconciled = gatewayMessages.map((message) => {
+            const existing = existingByIdentity.get(messageIdentity(message));
+            // Keep the live message id (the assistant message id comes from the
+            // relay database) while replacing its content with the recovered
+            // Gateway snapshot.
+            return existing && existing.id !== message.id ? { ...message, id: existing.id } : message;
+        });
+        const localMessages = [...messages.values()].filter((message) => {
+            const local = String(message.id).startsWith('local-')
+                || message.status === 'pending'
+                || message.status === 'streaming';
+            return local && !gatewayIdentities.has(messageIdentity(message));
+        });
+        renderHistory([...reconciled, ...localMessages]);
     }
 
     function setTyping(isTyping) {
@@ -355,8 +383,7 @@
             case 'history':
                 if (Array.isArray(payload.messages) && (!gatewayHistoryLoaded || payload.reconcile === true)) {
                     gatewayHistoryLoaded = true;
-                    const localMessages = [...messages.values()].filter((message) => String(message.id).startsWith('local-') || message.status === 'pending');
-                    renderHistory([...payload.messages, ...localMessages]);
+                    reconcileHistory(payload.messages);
                 }
                 break;
             case 'gateway.reconnected':
@@ -371,10 +398,10 @@
                 setTyping(true);
                 break;
             case 'message.delta':
-                addMessage({ id: payload.message_id || pendingRuns.get(String(payload.run_id)), role: 'assistant', text: payload.text || '', status: 'streaming' }, true);
+                addMessage({ id: payload.message_id || pendingRuns.get(String(payload.run_id)), run_id: payload.run_id, role: 'assistant', text: payload.text || '', status: 'streaming' }, true);
                 break;
             case 'message.final':
-                addMessage({ id: payload.message_id || pendingRuns.get(String(payload.run_id)), role: 'assistant', text: payload.text || '', status: 'completed' }, true);
+                addMessage({ id: payload.message_id || pendingRuns.get(String(payload.run_id)), run_id: payload.run_id, role: 'assistant', text: payload.text || '', status: 'completed' }, true);
                 pendingRuns.delete(String(payload.run_id));
                 setTyping(false);
                 break;
@@ -405,7 +432,7 @@
         if (input) input.value = '';
         resizeInput();
         const requestId = (window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);
-        addMessage({ id: requestId, role: 'user', text: content, status: 'pending', createdAt: new Date().toISOString() }, true);
+        addMessage({ id: requestId, request_id: requestId, role: 'user', text: content, status: 'pending', createdAt: new Date().toISOString() }, true);
         sendRaw({ type: 'message.create', request_id: requestId, content });
         connect();
     }

@@ -9,6 +9,13 @@ use Webchat\App\Token;
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
+$resolveSecret = (string) webchat_config()->get('WEBCHAT_CHANNEL_RESOLVE_SECRET', '');
+if ($resolveSecret !== '' && !hash_equals($resolveSecret, (string) ($_SERVER['HTTP_X_WEBCHAT_RESOLVE_SECRET'] ?? ''))) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'Resolver no autorizado'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $channel = strtolower(trim((string) ($_GET['channel'] ?? '')));
 $identity = trim((string) ($_POST['external_identity'] ?? $_GET['external_identity'] ?? ''));
 if (!in_array($channel, ['telegram', 'whatsapp'], true) || $identity === '') {
@@ -17,14 +24,24 @@ if (!in_array($channel, ['telegram', 'whatsapp'], true) || $identity === '') {
     exit;
 }
 
-$resolved = webchat_channels()->resolve($channel, $identity);
+$channels = webchat_channels();
+$resolved = $channels->resolve($channel, $identity);
 if ($resolved === null) {
     $base = rtrim((string) (webchat_config()->get('WEBCHAT_PUBLIC_BASE_URL', '') ?: ''), '/');
     $path = rtrim(webchat_config()->publicPath(), '/') . '/';
     $intent = Token::issue(['purpose' => 'channel_onboarding', 'channel' => $channel, 'external_identity' => $identity], (string) webchat_config()->get('APP_SECRET'), 900);
     $query = http_build_query(['intent' => $intent]);
-    echo json_encode(['ok' => true, 'registered' => false, 'action' => 'register', 'webchat_url' => ($base !== '' ? $base : '') . $path . '?' . $query], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $state = $channels->state($channel, $identity);
+    $action = $state === 'pending' ? 'continue_pairing' : 'register';
+    echo json_encode([
+        'ok' => true,
+        'registered' => false,
+        'state' => $state ?? 'unknown',
+        'action' => $action,
+        'channel' => $channel,
+        'webchat_url' => ($base !== '' ? $base : '') . $path . '?' . $query,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
-echo json_encode(['ok' => true, 'registered' => true, 'action' => 'route_to_agent'], JSON_UNESCAPED_UNICODE);
+echo json_encode(['ok' => true, 'registered' => true, 'state' => 'active', 'action' => 'route_to_agent'], JSON_UNESCAPED_UNICODE);

@@ -13,6 +13,10 @@ $required = [
     'function scheduleReconnect()',
     'inFlightOutbound.delete(String(payload.request_id));',
     'requeueInFlight();',
+    'function messageIdentity(message)',
+    'function reconcileHistory(history)',
+    'gatewayIdentities.has(messageIdentity(message))',
+    'run_id: payload.run_id',
 ];
 
 foreach ($required as $fragment) {
