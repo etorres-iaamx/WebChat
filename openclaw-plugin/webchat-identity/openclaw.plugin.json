@@ -11,7 +11,11 @@
     "properties": {
       "resolveUrl": {"type": "string", "format": "uri"},
       "resolveSecret": {"type": "string", "minLength": 16},
+      "pairingEventUrl": {"type": "string", "format": "uri"},
+      "pairingEventSecret": {"type": "string", "minLength": 16},
+      "publicBaseUrl": {"type": "string", "format": "uri"},
       "adminIdentities": {"type": "array", "items": {"type": "string", "minLength": 3}},
+      "supportEmail": {"type": "string", "format": "email"},
       "timeoutMs": {"type": "integer", "minimum": 250, "maximum": 10000}
     }
   }

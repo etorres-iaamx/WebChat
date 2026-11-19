@@ -2,7 +2,6 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
 
-use Webchat\App\Token;
 $authHeaders = [
     'Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
     'Pragma: no-cache',
@@ -10,23 +9,16 @@ $authHeaders = [
 ];
 foreach ($authHeaders as $header) header($header);
 $auth = webchat_auth()->userFromSession((string) ($_COOKIE['webchat_auth'] ?? ''));
-$onboardingIntent = Token::verify((string) ($_GET['intent'] ?? ''), (string) webchat_config()->get('APP_SECRET'));
-$pairingChannel = is_array($onboardingIntent) && ($onboardingIntent['purpose'] ?? '') === 'channel_onboarding' ? strtolower(trim((string) ($onboardingIntent['channel'] ?? ''))) : '';
-$pairingIdentity = is_array($onboardingIntent) && ($onboardingIntent['purpose'] ?? '') === 'channel_onboarding' ? trim((string) ($onboardingIntent['external_identity'] ?? '')) : '';
-$intent = $pairingChannel !== '' && $pairingIdentity !== '' ? (string) ($_GET['intent'] ?? '') : '';
 if ($auth !== null) {
-    if ($intent !== '') {
-        webchat_channels()->link(webchat_auth()->userIdFromSession((string) ($_COOKIE['webchat_auth'] ?? '')) ?? 0, $pairingChannel, $pairingIdentity);
-    }
     header('Location: ' . webchat_url('dashboard'));
     exit;
 }
 ?><!doctype html>
-<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>" data-onboarding-intent="<?= webchat_h($intent) ?>">
+<html lang="es" data-webchat-path="<?= webchat_h(webchat_url()) ?>">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261117-1')) ?>"></head>
 <body>
 <main class="auth-shell">
-  <section class="auth-card" aria-labelledby="title">
+  <section class="auth-card" aria-labelledby="title" data-onboarding-intent="<?= webchat_h((string) ($_GET['intent'] ?? '')) ?>">
     <img class="brand" src="<?= webchat_h(webchat_url('brand/iaa-mx-pleno-claro.svg')) ?>" alt="IAA MX">
     <p class="eyebrow">WebChat</p>
     <h1 id="title">Inicia sesión o regístrate</h1>
@@ -76,5 +68,5 @@ if ($auth !== null) {
     <p class="status" data-status role="status"></p>
   </section>
 </main>
-<script src="<?= webchat_h(webchat_url('auth.js?v=20261117-3')) ?>" defer></script>
+<script src="<?= webchat_h(webchat_url('auth.js?v=20261118-1')) ?>" defer></script>
 </body></html>

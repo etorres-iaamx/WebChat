@@ -67,6 +67,7 @@ $avatarUrl = !empty($authUser['has_avatar'])
     : '';
 $telegramBotUrl = trim((string) $config->get('TELEGRAM_BOT_URL', ''));
 $whatsappBotUrl = trim((string) $config->get('WHATSAPP_BOT_URL', ''));
+$pendingChannels = webchat_channels()->pendingForUser($authUserId);
 $clientConfig = json_encode([
     'token' => $relayToken,
     'webSocketUrl' => $webSocketUrl,
@@ -169,6 +170,18 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                             <?php else: ?>
                                 <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>El bot aún no está configurado.</small></span><span class="profile-option__status">Pendiente</span></button>
                             <?php endif; ?>
+                            <div data-pairing-container>
+                            <?php foreach ($pendingChannels as $pending): ?>
+                                <details class="profile-option" open>
+                                    <summary><span class="profile-option__icon" aria-hidden="true">⌁</span><span><strong>Completar pairing de <?= webchat_h(ucfirst((string) $pending['channel'])) ?></strong><small>Introduce el código que te entrega el bot.</small></span><span class="profile-option__status">Pendiente</span></summary>
+                                    <form class="profile-form pairing-form" data-pairing-form data-channel="<?= webchat_h((string) $pending['channel']) ?>">
+                                        <label>Código de pairing<input name="code" inputmode="text" minlength="6" maxlength="12" autocomplete="one-time-code" required></label>
+                                        <button class="profile-action" type="submit">Aprobar pairing</button>
+                                        <p class="profile-form__status" data-pairing-status role="status" aria-live="polite"></p>
+                                    </form>
+                                </details>
+                            <?php endforeach; ?>
+                            </div>
                             <?php if ($whatsappBotUrl !== ''): ?>
                                 <a class="profile-option" href="<?= webchat_h($whatsappBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Abre WhatsApp para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
                             <?php else: ?>
@@ -284,6 +297,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         window.IAAMX_WEBCHAT = <?= $clientConfig ?>;
         window.IAAMX_HISTORY = <?= $historyJson ?>;
     </script>
-    <script src="<?= webchat_h(webchat_url('dashboard.js?v=20261116-1')) ?>" defer></script>
+    <script src="<?= webchat_h(webchat_url('dashboard.js?v=20261119-3')) ?>" defer></script>
 </body>
 </html>

@@ -44,7 +44,7 @@ final class OpenClawBindingManager
                     throw new RuntimeException('Esta identidad ya está vinculada a otro agente OpenClaw.');
                 }
             }
-            $bindings[] = [
+            $peerBinding = [
                 'agentId' => $agentId,
                 'match' => [
                     'channel' => $channel,
@@ -52,6 +52,19 @@ final class OpenClawBindingManager
                     'peer' => ['kind' => 'direct', 'id' => $externalIdentity],
                 ],
             ];
+            // OpenClaw resolves bindings in declaration order. Keep direct-peer
+            // bindings ahead of broad account/channel fallbacks such as main.
+            $peerBindings = [];
+            $fallbackBindings = [];
+            foreach ($bindings as $binding) {
+                if (($binding['match']['peer']['kind'] ?? '') === 'direct') {
+                    $peerBindings[] = $binding;
+                } else {
+                    $fallbackBindings[] = $binding;
+                }
+            }
+            $peerBindings[] = $peerBinding;
+            $bindings = array_merge($peerBindings, $fallbackBindings);
             $this->patchBindings($bindings);
         } finally {
             flock($lock, LOCK_UN);

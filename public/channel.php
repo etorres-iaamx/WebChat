@@ -32,7 +32,10 @@ if ($resolved === null) {
     $intent = Token::issue(['purpose' => 'channel_onboarding', 'channel' => $channel, 'external_identity' => $identity], (string) webchat_config()->get('APP_SECRET'), 900);
     $query = http_build_query(['intent' => $intent]);
     $state = $channels->state($channel, $identity);
-    $action = $state === 'pending' ? 'continue_pairing' : 'register';
+    // A linked WebChat identity waits for OpenClaw's native pairing code.
+    // Keep the resolver action aligned with channel_identities.status so an
+    // already-created account is not sent through registration again.
+    $action = $state === 'binding_pending' ? 'continue_pairing' : 'register';
     echo json_encode([
         'ok' => true,
         'registered' => false,

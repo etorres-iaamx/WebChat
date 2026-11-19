@@ -78,9 +78,15 @@ final class OpenClawClient
     /** @return array<string, mixed> */
     public function sendChat(string $sessionKey, string $message, string $idempotencyKey, ?string $agentId = null): array
     {
+        $resolvedAgentId = trim((string) $agentId);
+        if ($resolvedAgentId === '') {
+            throw new RuntimeException('La sesión de WebChat no tiene un agente propio provisionado.');
+        }
         return $this->request('chat.send', [
             'sessionKey' => $sessionKey,
-            'agentId' => $agentId ?: $this->config->get('OPENCLAW_AGENT_ID', 'main'),
+            // Never fall back to main/Xochitl: a missing user agent must fail
+            // closed instead of leaking the WebChat conversation into Xochitl.
+            'agentId' => $resolvedAgentId,
             'message' => $message,
             'idempotencyKey' => $idempotencyKey,
             'deliver' => false,

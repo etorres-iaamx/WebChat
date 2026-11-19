@@ -1,6 +1,6 @@
 (() => {
   const basePath = document.documentElement.dataset.webchatPath || '/webchat';
-  const onboardingIntent = document.documentElement.dataset.onboardingIntent || '';
+  const onboardingIntent = document.querySelector('[data-onboarding-intent]')?.dataset.onboardingIntent || '';
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
   const tabs = document.querySelector('.tabs');
@@ -44,11 +44,6 @@
     event.preventDefault();
     try {
       await submit(forms.login, 'login');
-      if (onboardingIntent) {
-        const linkResponse = await fetch(`${basePath}/api.php?action=channel/link`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({intent: onboardingIntent}) });
-        const link = await linkResponse.json();
-        if (!linkResponse.ok || !link.ok) throw new Error(link.error || 'No fue posible vincular el canal.');
-      }
       location.href = `${basePath}/dashboard`;
     } catch (error) { setStatus(error.message, true); }
   });
@@ -81,11 +76,9 @@
         return;
       }
       if (onboardingIntent) {
-        const linkResponse = await fetch(`${basePath}/api.php?action=channel/link`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify({intent: onboardingIntent}) });
-        const link = await linkResponse.json();
-        if (!linkResponse.ok || !link.ok) throw new Error(link.error || 'No fue posible vincular el canal.');
+        await submit(null, 'channel/reserve', {intent: onboardingIntent});
       }
-      setStatus('Correo verificado. Ya puedes iniciar sesión.');
+      setStatus(onboardingIntent ? 'Correo verificado. Inicia sesión para completar el pairing en WebChat.' : 'Correo verificado. Ya puedes iniciar sesión.');
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) {
