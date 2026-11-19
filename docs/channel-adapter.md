@@ -20,14 +20,23 @@ del WebChat. No se crea sesión ni se envía el mensaje al agente `main`.
 
 ## Pairing
 
-WebChat no simula ni genera códigos de pairing. OpenClaw envía su mensaje nativo a
-los remitentes desconocidos y `webapp2-etorres` procesa el formulario público para
-ejecutar `openclaw pairing approve <canal> <código>`.
+WebChat no genera códigos: OpenClaw los crea y los mantiene como autoridad nativa.
+WebChat sí muestra el código recibido, persiste el estado actual y ejecuta el formulario
+que llama a `openclaw pairing approve <canal> <código>` desde el backend.
 
 Cuando un remitente desconocido abre la invitación de WebChat, el canal y su
 identificador se conservan durante el registro o inicio de sesión. Tras autenticar
-la cuenta, WebChat registra el vínculo con el agente; después OpenClaw continúa con
-su pairing nativo y bloquea el acceso hasta que el código sea aprobado.
+la cuenta, WebChat registra la identidad como `binding_pending`; después OpenClaw continúa
+con su pairing nativo y bloquea el acceso hasta que el código sea aprobado. La interfaz solo
+muestra el apartado cuando existe una solicitud vigente.
+
+`pairing_state` contiene una sola solicitud activa por identidad y canal. `pairing_events`
+es histórico y registra creación, aprobación, expiración o reemplazo; no se consulta para
+decidir la visibilidad normal del apartado.
+
+La actualización principal llega por el evento `pairing.updated` del relay. El navegador
+hace una consulta inicial al abrir el dashboard y usa polling de 30 segundos únicamente
+durante una desconexión del WebSocket.
 
 El core de la aplicación mantiene la asociación entre `canal + identificador externo`
 y el agente correspondiente. Aprobar el pairing de OpenClaw autoriza al remitente a

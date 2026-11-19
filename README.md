@@ -18,14 +18,19 @@ Implementado en esta primera entrega:
 - WebChat protegido: una persona no autenticada no puede abrir el chat.
 - Provisioning real de OpenClaw administrado por el core de la aplicación; se habilita con `OPENCLAW_PROVISIONING_ENABLED=1`.
 
-El historial es exclusivamente el de OpenClaw; `relay_requests` conserva únicamente
-correlación técnica. Telegram y WhatsApp usan identidades externas y el pairing nativo de OpenClaw.
+El contenido de conversación es exclusivamente el de OpenClaw; `relay_requests` conserva
+solo correlación técnica. Telegram y WhatsApp usan identidades externas y el pairing nativo
+de OpenClaw. El estado vigente del pairing se mantiene en `pairing_state`; `pairing_events`
+conserva el historial de eventos y no decide por sí sola la visibilidad de la interfaz.
 
 ## Siguiente bloque implementado
 
 - `public/channel.php` resuelve una identidad de Telegram/WhatsApp sin exponer el agente.
 - Una identidad desconocida recibe la URL del WebChat y no se enruta a OpenClaw.
-- `channel_identities` conserva únicamente el vínculo confirmado; WebChat no genera códigos de pairing.
+- `channel_identities` conserva la identidad reservada o vinculada (`binding_pending`/`paired`).
+- `pairing_state` conserva una sola solicitud activa por identidad y canal, con su expiración;
+  `pairing_events` conserva los eventos cerrados (`approved`, `expired` o `superseded`).
+- OpenClaw genera y aprueba los códigos; WebChat los muestra y ejecuta la aprobación nativa.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
 - `OPENCLAW_PROVISIONING_ENABLED=1` activa el provisioning mediante el adaptador interno del core.
@@ -33,9 +38,10 @@ correlación técnica. Telegram y WhatsApp usan identidades externas y el pairin
   perfil WebChat (nombre, correo, teléfono, país e identificador público); nunca copia
   contraseñas ni códigos de verificación.
 
-El WebChat solo orquesta identidad, ruteo y sesiones. El pairing nativo de OpenClaw se
-aprueba mediante `webapp2-etorres`; el core conserva la asociación del remitente con
-el agente. `runtime/agent_admin.py` es el adaptador interno del core: crea el agente
+El WebChat solo orquesta identidad, ruteo, sesiones y la pantalla de aprobación del pairing.
+El pairing nativo de OpenClaw se aprueba desde WebChat mediante la CLI del Gateway; el core
+conserva la asociación del remitente con el agente. `runtime/agent_admin.py` es el adaptador
+interno del core: crea el agente
 con la CLI oficial, escribe únicamente su contexto y persiste el binding resultante.
 
 ### Aislamiento sin Docker
@@ -109,7 +115,10 @@ ngrok → Caddy :8080
                                       └── MariaDB
 ```
 
-El navegador recibe únicamente un token firmado y de duración limitada para la sesión. La credencial del Gateway solo se lee en el proceso PHP del relay. Cada usuario autenticado tiene una conversación y una clave de sesión OpenClaw dedicada (`agent:main:webchat-iaamx:<id>`).
+El navegador recibe únicamente un token firmado y de duración limitada para la sesión. La
+credencial del Gateway solo se lee en el proceso PHP del relay. Cada usuario autenticado tiene
+una conversación y una clave de sesión dedicada a su agente provisionado (`agent:<agent-id>:...`).
+WebChat no usa `main` como fallback; si falta el agente propio, la operación falla de forma segura.
 
 ## Requisitos
 
@@ -160,7 +169,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 FLUSH PRIVILEGES;
 ```
 
-Las migraciones crean las entidades de identidad, sesión y correlación del relay. Desde
+Las migraciones crean las entidades de identidad, sesión, correlación del relay y estado de
+pairing. Desde
 `004_openclaw_history_only.sql`, el contenido de conversación no se guarda en MariaDB:
 el historial se obtiene exclusivamente con `chat.history` de OpenClaw; `relay_requests`
 solo conserva request IDs, run IDs y estados técnicos para idempotencia. La migración
@@ -180,6 +190,11 @@ php bin/provision-pending.php 10
 El worker es seguro para reintentar: los bindings existentes se reutilizan y los errores
 técnicos se conservan solo en logs y en el estado interno del job.
 
+`010_pairing_events.sql` y `011_pairing_events_active_identity.sql` agregan el historial
+de eventos. `012_pairing_state.sql` crea la fuente de estado actual, con una restricción
+única por `channel + account_id + external_identity`; el runtime consulta esta tabla para
+mostrar el pairing y no recorre el historial completo.
+
 ## OpenClaw Gateway
 
 El relay usa el protocolo WebSocket v4 del Gateway:
@@ -189,7 +204,15 @@ El relay usa el protocolo WebSocket v4 del Gateway:
 3. envía `chat.send` con `deliver=false`;
 4. relays los eventos `chat` (`status`, `delta`, `final`, `error`) al navegador.
 
-Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y `OPENCLAW_AGENT_ID` en `.env`. No coloques el token en `dashboard.js`, HTML, el navegador ni el repositorio.
+Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y deja `OPENCLAW_AGENT_ID` vacío
+para que el cliente use el agente provisionado de la sesión. No coloques el token en
+`dashboard.js`, HTML, el navegador ni el repositorio.
+
+Cuando OpenClaw crea un pairing, el plugin persiste `pairing_created` en WebChat y publica
+`pairing.updated` por el relay. El navegador actualiza la interfaz por WebSocket; al perder
+la conexión, consulta el estado como respaldo cada 30 segundos y detiene ese polling al
+reconectar. Una solicitud `pending` vigente y una identidad `binding_pending` o `paired` son
+necesarias para mostrar el apartado.
 
 ## Publicación en ngrok
 

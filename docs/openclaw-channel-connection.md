@@ -36,6 +36,16 @@ openclaw gateway restart
 
 El plugin solo reclama mensajes directos de Telegram y WhatsApp. Si WebChat responde que la identidad está registrada, deja continuar el enrutamiento normal; el binding por peer dirige el mensaje al agente correcto. Si no está registrada, reclama el mensaje y envía el enlace de registro.
 
+Si la identidad está reservada (`binding_pending`), el plugin deja pasar el flujo nativo de
+pairing. Cuando OpenClaw genera el código, el plugin notifica a `pairing-event.php` y emite
+la actualización `pairing.updated` al relay. Una respuesta normal del agente nunca se
+enriquece con un código de pairing: solo se agrega información cuando el mensaje saliente
+ya contiene el mismo código nativo de esa identidad.
+
+El binding por peer debe apuntar a un agente provisionado específico. No se debe conservar
+una sesión antigua bajo `agent:main:telegram:direct:<id>` después de crear el binding; hay
+que eliminarla para que el siguiente mensaje cree una sesión bajo el agente correcto.
+
 ## WhatsApp
 
 La lógica está lista, pero el canal debe estar autenticado en OpenClaw. La primera conexión requiere ejecutar el login de WhatsApp y escanear el QR en el host. Mientras el canal esté desconectado no es posible hacer una prueba real de extremo a extremo.
