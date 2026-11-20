@@ -155,6 +155,33 @@ php -S 127.0.0.1:8082 -t public
 php bin/webchat-ws.php
 ```
 
+## Instalación reproducible en otra máquina
+
+Para preparar un host nuevo, copia `.env.example` a `.env`, completa las credenciales,
+el dominio público y el workspace de agentes, y ejecuta:
+
+```bash
+chmod 600 .env
+bin/install.sh --env-file .env
+```
+
+El instalador valida PHP 8.3 con `pdo_mysql`, Python 3.12, MariaDB y OpenClaw; crea la
+base y el usuario de aplicación usando una cuenta DBA temporal, ejecuta las migraciones,
+instala/configura el plugin, genera unidades systemd para HTTP, relay, Caddy, provisioning
+y ngrok, y activa los servicios. `DB_ADMIN_SOCKET_AUTH=1` permite usar autenticación local
+por socket sin guardar una contraseña DBA. La contraseña de la aplicación sí permanece en
+`.env`, que no debe versionarse.
+
+Para validar sin modificar la máquina:
+
+```bash
+bin/install.sh --env-file .env --check-only
+```
+
+El instalador no instala el Gateway de OpenClaw ni crea la cuenta de ngrok: ambos deben
+estar instalados y autenticados previamente. `WEBCHAT_NGROK_DOMAIN` es opcional si se
+publicará Caddy mediante otro proxy.
+
 La pantalla se publica mediante Caddy en `http://127.0.0.1:8080/webchat/`; las entradas
 internas `auth.php` y `dashboard.php` no deben abrirse directamente. Si se accede al
 entorno local, usa `WEBCHAT_PUBLIC_WS_URL=ws://127.0.0.1:8081/webchat/ws`.
