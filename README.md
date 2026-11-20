@@ -130,6 +130,27 @@ WebChat no usa `main` como fallback; si falta el agente propio, la operación fa
 - OpenClaw Gateway local accesible por WebSocket.
 - Caddy y ngrok para publicar HTTP y WebSocket en el mismo dominio.
 
+Estas dependencias deben instalarse en el host antes de ejecutar el instalador del
+repositorio. En Debian/Ubuntu, una preparación mínima es:
+
+```bash
+sudo apt update
+sudo apt install -y php8.3-cli php8.3-mysql python3.12 mariadb-server caddy unzip curl
+```
+
+Instala también el binario de OpenClaw y el CLI de ngrok siguiendo sus instrucciones
+oficiales. Después autentica ambos servicios en el host:
+
+```bash
+openclaw gateway status
+ngrok config add-authtoken TU_TOKEN_DE_NGROK
+```
+
+El Gateway debe estar iniciado y accesible por WebSocket antes de ejecutar
+`bin/install.sh`. Ngrok debe tener una cuenta autenticada si se utilizará un dominio
+reservado. El instalador del repositorio **no instala** paquetes del sistema, OpenClaw,
+MariaDB, Caddy ni ngrok; solo valida que existan, prepara WebChat y configura sus servicios.
+
 ## Instalación local
 
 ```bash
