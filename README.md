@@ -20,16 +20,18 @@ Implementado en esta primera entrega:
 
 El contenido de conversación es exclusivamente el de OpenClaw; `relay_requests` conserva
 solo correlación técnica. Telegram y WhatsApp usan identidades externas y el pairing nativo
-de OpenClaw. El estado vigente del pairing se mantiene en `pairing_state`; `pairing_events`
-conserva el historial de eventos y no decide por sí sola la visibilidad de la interfaz.
+de OpenClaw. La solicitud pendiente y su expiración viven únicamente en OpenClaw; WebChat
+no mantiene un segundo estado de pairing ni decide la visibilidad con polling o eventos.
 
 ## Siguiente bloque implementado
 
 - `public/channel.php` resuelve una identidad de Telegram/WhatsApp sin exponer el agente.
-- Una identidad desconocida recibe la URL del WebChat y no se enruta a OpenClaw.
-- `channel_identities` conserva la identidad reservada o vinculada (`binding_pending`/`paired`).
-- `pairing_state` conserva una sola solicitud activa por identidad y canal, con su expiración;
-  `pairing_events` conserva los eventos cerrados (`approved`, `expired` o `superseded`).
+- Toda identidad no vinculada recibe el mismo onboarding: enlace de WebChat, código nativo
+  y contacto de soporte en la respuesta de Telegram/WhatsApp; no se enruta a `main`.
+- `channel_identities` conserva la identidad vinculada (`binding_pending`/`paired`); la identidad
+  se obtiene del pairing validado por OpenClaw, no de un parámetro enviado en la URL.
+- El formulario de pairing está disponible para el usuario autenticado; el código de OpenClaw
+  es la única validación que decide si la vinculación puede completarse.
 - OpenClaw genera y aprueba los códigos; WebChat los muestra y ejecuta la aprobación nativa.
 - El WebChat autenticado ya no puede caer silenciosamente en `main`: requiere un binding
   OpenClaw provisionado.
@@ -190,10 +192,10 @@ php bin/provision-pending.php 10
 El worker es seguro para reintentar: los bindings existentes se reutilizan y los errores
 técnicos se conservan solo en logs y en el estado interno del job.
 
-`010_pairing_events.sql` y `011_pairing_events_active_identity.sql` agregan el historial
-de eventos. `012_pairing_state.sql` crea la fuente de estado actual, con una restricción
-única por `channel + account_id + external_identity`; el runtime consulta esta tabla para
-mostrar el pairing y no recorre el historial completo.
+`003_pairing_attempts.sql`, `010_pairing_events.sql`, `011_pairing_events_active_identity.sql`
+y `012_pairing_state.sql` son migraciones históricas. El instalador las marca como legacy y
+las omite en instalaciones nuevas; la migración `014_drop_legacy_pairing_state.sql` las retira
+de instalaciones existentes junto con `013_drop_legacy_pairing_attempts.sql`.
 
 ## OpenClaw Gateway
 
@@ -208,11 +210,12 @@ Configura `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN` y deja `OPENCLAW_AGEN
 para que el cliente use el agente provisionado de la sesión. No coloques el token en
 `dashboard.js`, HTML, el navegador ni el repositorio.
 
-Cuando OpenClaw crea un pairing, el plugin persiste `pairing_created` en WebChat y publica
-`pairing.updated` por el relay. El navegador actualiza la interfaz por WebSocket; al perder
-la conexión, consulta el estado como respaldo cada 30 segundos y detiene ese polling al
-reconectar. Una solicitud `pending` vigente y una identidad `binding_pending` o `paired` son
-necesarias para mostrar el apartado.
+Cuando OpenClaw crea un pairing, el plugin conserva el código asociado al remitente y
+enriquece el mismo mensaje nativo con enlace, código y soporte. Si el resolver no responde,
+usa la URL pública configurada como fallback, por lo que un pairing válido no pierde el enlace.
+La URL de WebChat es genérica:
+el código nativo de OpenClaw es la única credencial de vinculación y el backend obtiene la
+identidad desde la solicitud pendiente antes de aprobarla.
 
 ## Publicación en ngrok
 

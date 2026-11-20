@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/config/bootstrap.php';
 
-use Webchat\App\Token;
-
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -29,20 +27,18 @@ $resolved = $channels->resolve($channel, $identity);
 if ($resolved === null) {
     $base = rtrim((string) (webchat_config()->get('WEBCHAT_PUBLIC_BASE_URL', '') ?: ''), '/');
     $path = rtrim(webchat_config()->publicPath(), '/') . '/';
-    $intent = Token::issue(['purpose' => 'channel_onboarding', 'channel' => $channel, 'external_identity' => $identity], (string) webchat_config()->get('APP_SECRET'), 900);
-    $query = http_build_query(['intent' => $intent]);
     $state = $channels->state($channel, $identity);
-    // A linked WebChat identity waits for OpenClaw's native pairing code.
-    // Keep the resolver action aligned with channel_identities.status so an
-    // already-created account is not sent through registration again.
-    $action = $state === 'binding_pending' ? 'continue_pairing' : 'register';
+    // Every not-yet-paired identity follows the same onboarding path. The
+    // caller authenticates in WebChat and then enters the native code that
+    // OpenClaw returns in the same Telegram/WhatsApp reply.
+    $action = 'pairing';
     echo json_encode([
         'ok' => true,
         'registered' => false,
         'state' => $state ?? 'unknown',
         'action' => $action,
         'channel' => $channel,
-        'webchat_url' => ($base !== '' ? $base : '') . $path . '?' . $query,
+        'webchat_url' => ($base !== '' ? $base : '') . $path,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

@@ -5,8 +5,6 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/config/bootstrap.php';
 
 use Webchat\Auth\AuthService;
-use Webchat\App\Token;
-
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -89,32 +87,11 @@ try {
         }
         json_response(['ok' => true]);
     }
-    if ($action === 'channel/link' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $userId = $auth->userIdFromSession(auth_token());
-        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
-        $intent = Token::verify((string) ($data['intent'] ?? ''), (string) webchat_config()->get('APP_SECRET'));
-        if (!is_array($intent) || ($intent['purpose'] ?? '') !== 'channel_onboarding') json_response(['ok' => false, 'error' => 'La invitación de canal no es válida o expiró.'], 422);
-        webchat_channels()->link($userId, (string) ($intent['channel'] ?? ''), (string) ($intent['external_identity'] ?? ''));
-        json_response(['ok' => true]);
-    }
-    if ($action === 'channel/reserve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $userId = $auth->userIdFromSession(auth_token());
-        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
-        $intent = Token::verify((string) ($data['intent'] ?? ''), (string) webchat_config()->get('APP_SECRET'));
-        if (!is_array($intent) || ($intent['purpose'] ?? '') !== 'channel_onboarding') json_response(['ok' => false, 'error' => 'La invitación de canal no es válida o expiró.'], 422);
-        webchat_channels()->link($userId, (string) ($intent['channel'] ?? ''), (string) ($intent['external_identity'] ?? ''));
-        json_response(['ok' => true]);
-    }
     if ($action === 'channel/approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = $auth->userIdFromSession(auth_token());
         if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
         webchat_channels()->approvePairing($userId, (string) ($data['channel'] ?? ''), (string) ($data['code'] ?? ''));
         json_response(['ok' => true]);
-    }
-    if ($action === 'channel/pending') {
-        $userId = $auth->userIdFromSession(auth_token());
-        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
-        json_response(['ok' => true, 'data' => ['channels' => webchat_channels()->pendingForUser($userId)]]);
     }
     json_response(['ok' => false, 'error' => 'Ruta no encontrada.'], 404);
 } catch (Throwable $exception) {

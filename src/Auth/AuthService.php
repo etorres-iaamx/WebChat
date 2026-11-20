@@ -224,10 +224,18 @@ final class AuthService
         $statement->execute(['user_id' => $userId]);
         $agent = $statement->fetch();
         if (!is_array($agent)) return;
-        $binding = $this->database->pdo()->prepare('SELECT id, external_agent_id FROM runtime_bindings WHERE logical_agent_id = :agent_id AND runtime = \'openclaw\' LIMIT 1');
+        $binding = $this->database->pdo()->prepare('SELECT id, external_agent_id, status FROM runtime_bindings WHERE logical_agent_id = :agent_id AND runtime = \'openclaw\' LIMIT 1');
         $binding->execute(['agent_id' => $agent['id']]);
         $existing = $binding->fetch();
-        if (is_array($existing) && $existing['external_agent_id']) return;
+        if (is_array($existing) && $existing['external_agent_id']) {
+            if (($existing['status'] ?? '') !== 'active') {
+                $this->database->pdo()->prepare('UPDATE runtime_bindings SET status = \'active\', last_error = NULL WHERE id = :id')
+                    ->execute(['id' => $existing['id']]);
+                $this->database->pdo()->prepare('UPDATE logical_agents SET status = \'active\' WHERE id = :id')
+                    ->execute(['id' => $agent['id']]);
+            }
+            return;
+        }
         $resource = (new OpenClawProvisioner($this->config))->provision(
             (string) $agent['public_id'], (string) $agent['display_name'], (string) $agent['email'],
             (string) ($agent['phone'] ?? ''), (string) ($agent['country_code'] ?? ''),

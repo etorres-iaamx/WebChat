@@ -1,6 +1,5 @@
 (() => {
   const basePath = document.documentElement.dataset.webchatPath || '/webchat';
-  const onboardingIntent = document.querySelector('[data-onboarding-intent]')?.dataset.onboardingIntent || '';
   const status = document.querySelector('[data-status]');
   const forms = Object.fromEntries([...document.querySelectorAll('[data-form]')].map((form) => [form.dataset.form, form]));
   const tabs = document.querySelector('.tabs');
@@ -75,10 +74,7 @@
         setStatus('No fue posible completar la operación. Intenta nuevamente más tarde.', true);
         return;
       }
-      if (onboardingIntent) {
-        await submit(null, 'channel/reserve', {intent: onboardingIntent});
-      }
-      setStatus(onboardingIntent ? 'Correo verificado. Inicia sesión para completar el pairing en WebChat.' : 'Correo verificado. Ya puedes iniciar sesión.');
+      setStatus('Correo verificado. Ya puedes iniciar sesión y completar el pairing con el código de Telegram.');
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) {

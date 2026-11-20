@@ -26,16 +26,7 @@ final class OpenClawPairingManager
 
         $account = (string) $this->config->get('OPENCLAW_CHANNEL_ACCOUNT_ID', 'default');
         $binary = (string) $this->config->get('OPENCLAW_BINARY', 'openclaw');
-        $requests = $this->pendingRequests($channel);
-        $request = null;
-        foreach ($requests as $candidate) {
-            if (!is_array($candidate)) continue;
-            $candidateCode = (string) ($candidate['code'] ?? $candidate['pairingCode'] ?? '');
-            if (hash_equals($candidateCode, $code)) {
-                $request = $candidate;
-                break;
-            }
-        }
+        $request = $this->pendingRequestForCode($channel, $code);
         if ($request === null) {
             throw new RuntimeException('El código no está pendiente o expiró.');
         }
@@ -57,6 +48,48 @@ final class OpenClawPairingManager
         return $request;
     }
 
+    /** @return array<string,mixed>|null */
+    public function pendingRequestForCode(string $channel, string $code): ?array
+    {
+        $code = trim($code);
+        if (!preg_match('/^[A-Za-z0-9]{6,12}$/', $code)) {
+            throw new RuntimeException('El código de pairing no es válido.');
+        }
+        foreach ($this->pendingRequests($channel) as $candidate) {
+            if (!is_array($candidate)) continue;
+            $candidateCode = (string) ($candidate['code'] ?? $candidate['pairingCode'] ?? '');
+            if ($candidateCode !== '' && hash_equals($candidateCode, $code)) return $candidate;
+        }
+        return null;
+    }
+
+    public function identityFromRequest(array $request): ?string
+    {
+        $candidates = [
+            $request['externalIdentity'] ?? null,
+            $request['external_identity'] ?? null,
+            $request['senderId'] ?? null,
+            $request['sender_id'] ?? null,
+            $request['from'] ?? null,
+            $request['id'] ?? null,
+        ];
+        $meta = $request['meta'] ?? $request['metadata'] ?? null;
+        if (is_array($meta)) {
+            $candidates = array_merge($candidates, [
+                $meta['externalIdentity'] ?? null,
+                $meta['external_identity'] ?? null,
+                $meta['senderId'] ?? null,
+                $meta['sender_id'] ?? null,
+                $meta['from'] ?? null,
+            ]);
+        }
+        foreach ($candidates as $candidate) {
+            $value = is_scalar($candidate) ? trim((string) $candidate) : '';
+            if ($value !== '') return $value;
+        }
+        return null;
+    }
+
     /** @return list<array<string,mixed>> */
     public function pendingRequests(string $channel): array
     {
@@ -74,35 +107,4 @@ final class OpenClawPairingManager
         return array_values(array_filter($requests, static fn (mixed $request): bool => is_array($request)));
     }
 
-    public function hasPendingRequest(string $channel, string $identity): bool
-    {
-        $identity = trim($identity);
-        if ($identity === '') return false;
-
-        foreach ($this->pendingRequests($channel) as $request) {
-            $candidates = [
-                $request['requestId'] ?? null,
-                $request['request_id'] ?? null,
-                $request['id'] ?? null,
-                $request['externalIdentity'] ?? null,
-                $request['senderId'] ?? null,
-                $request['from'] ?? null,
-            ];
-            $meta = $request['meta'] ?? $request['metadata'] ?? null;
-            if (is_array($meta)) {
-                $candidates = array_merge($candidates, [
-                    $meta['requestId'] ?? null,
-                    $meta['request_id'] ?? null,
-                    $meta['externalIdentity'] ?? null,
-                    $meta['senderId'] ?? null,
-                    $meta['from'] ?? null,
-                ]);
-            }
-            if (in_array($identity, array_map(static fn (mixed $value): string => trim((string) $value), $candidates), true)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

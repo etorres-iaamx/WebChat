@@ -18,7 +18,7 @@ if ($auth !== null) {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebChat IAAMX</title><link rel="stylesheet" href="<?= webchat_h(webchat_url('auth.css?v=20261117-1')) ?>"></head>
 <body>
 <main class="auth-shell">
-  <section class="auth-card" aria-labelledby="title" data-onboarding-intent="<?= webchat_h((string) ($_GET['intent'] ?? '')) ?>">
+  <section class="auth-card" aria-labelledby="title">
     <img class="brand" src="<?= webchat_h(webchat_url('brand/iaa-mx-pleno-claro.svg')) ?>" alt="IAA MX">
     <p class="eyebrow">WebChat</p>
     <h1 id="title">Inicia sesión o regístrate</h1>

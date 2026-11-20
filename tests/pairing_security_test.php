@@ -10,9 +10,8 @@ $manager = file_get_contents(__DIR__ . '/../src/Runtime/OpenClawBindingManager.p
 $pairing = file_get_contents(__DIR__ . '/../src/Runtime/OpenClawPairingManager.php');
 $auth = file_get_contents(__DIR__ . '/../public/auth.php');
 $authJs = file_get_contents(__DIR__ . '/../public/auth.js');
-$pairingEvent = file_get_contents(__DIR__ . '/../public/pairing-event.php');
 
-foreach ([$service, $resolver, $plugin, $schema, $manager, $pairing, $auth, $authJs, $pairingEvent] as $source) {
+foreach ([$service, $resolver, $plugin, $schema, $manager, $pairing, $auth, $authJs] as $source) {
     if ($source === false) {
         throw new RuntimeException('No se pudo leer una fuente de pairing.');
     }
@@ -25,45 +24,39 @@ $assertions = [
     'link rechaza takeover' => str_contains($service, 'Esta identidad de canal ya está vinculada a otra cuenta.'),
     'link no reasigna el propietario' => !str_contains($service, 'ON DUPLICATE KEY UPDATE user_id ='),
     'resolver valida secreto opcional' => str_contains($resolver, 'HTTP_X_WEBCHAT_RESOLVE_SECRET'),
-    'resolver distingue pairing pendiente' => str_contains($resolver, "continue_pairing"),
+    'resolver unifica onboarding y pairing' => str_contains($resolver, "\$action = 'pairing'") && !str_contains($resolver, "continue_pairing"),
     'resolver expone estado desconocido' => str_contains($resolver, "'state' => \$state ?? 'unknown'"),
     'plugin usa resolver local correcto' => str_contains($plugin, "127.0.0.1:8082/channel.php"),
     'plugin envía secreto opcional' => str_contains($plugin, 'x-webchat-resolve-secret'),
-    'plugin personaliza mensaje de onboarding' => str_contains($plugin, 'Después podrás aprobar el pairing'),
-    'plugin informa pairing pendiente' => str_contains($plugin, 'Tu solicitud de ${channel} ya está pendiente'),
-    'plugin intercepta antes de ejecutar el modelo' => str_contains($plugin, 'api.on("before_agent_reply"'),
-    'plugin usa reply payload del dispatcher' => str_contains($plugin, 'reply: {text: result.text}'),
-    'plugin intercepta antes del dispatch nativo' => str_contains($plugin, 'api.on("before_dispatch"'),
+    'plugin no intercepta el onboarding antes del pairing nativo' => !str_contains($plugin, 'api.on("before_dispatch"') && !str_contains($plugin, 'api.on("before_agent_reply"'),
+    'plugin enriquece pairing nativo' => str_contains($plugin, 'pairingDestination') && str_contains($plugin, 'Completa tu pairing en WebChat'),
     'plugin no depende de inbound_claim global' => !str_contains($plugin, 'api.on("inbound_claim"'),
-    'plugin tolera identidad desde sender o chat' => str_contains($plugin, 'context.channelContext?.sender?.id') && str_contains($plugin, 'context.channelContext?.chat?.id'),
+    'plugin usa identidad del evento nativo' => str_contains($plugin, 'event.senderId'),
     'plugin no restringe el hook a un trigger frágil' => !str_contains($plugin, 'eligibleTriggers: ["user"]'),
     'plugin excluye al administrador' => str_contains($plugin, 'telegram:1557679246'),
     'plugin permite configurar administradores' => str_contains($schema, 'adminIdentities'),
     'plugin adjunta URL y soporte al pairing' => str_contains($plugin, 'channel_pairing_requested') && str_contains($plugin, 'Completa tu pairing en WebChat'),
+    'plugin no omite pairing por route_to_agent' => !str_contains($plugin, 'result?.action === "route_to_agent"') && str_contains($plugin, 'fallbackWebchatUrl'),
     'plugin no adjunta código a respuestas normales' => str_contains($plugin, 'asText(event.content).includes(code)'),
-    'plugin no mezcla códigos entre remitentes' => str_contains($plugin, 'pairingRequests.get(pairingKey(channel, target))'),
-    'resolver continúa pairing pendiente' => str_contains($resolver, '$state === \'binding_pending\' ? \'continue_pairing\' : \'register\''),
-    'link crea binding pendiente' => str_contains($service, "status = \'binding_pending\'"),
+    'plugin no mezcla códigos entre remitentes' => str_contains($plugin, 'pairingEligibility.get(key)') && str_contains($plugin, 'pairingRequests.get(key)'),
+    'pairing reserva la identidad devuelta por OpenClaw' => str_contains($service, 'identityFromRequest') && str_contains($service, '$this->reserve($userId, $channel, $externalIdentity)'),
     'link sincroniza peer binding' => str_contains($service, 'bindPeer'),
     'binding usa peer directo' => str_contains($manager, "'kind' => 'direct'"),
     'binding rechaza peer de otro agente' => str_contains($manager, 'ya está vinculada a otro agente OpenClaw.'),
     'binding conserva los existentes' => str_contains($manager, "'config', 'get', 'bindings', '--json'"),
     'schema expone resolveSecret' => str_contains($schema, 'resolveSecret'),
-    'auth no auto-vincula identidad' => !str_contains($auth, 'webchat_channels()->link('),
-    'auth js no auto-vincula identidad' => !str_contains($authJs, "action=channel/link"),
-    'auth js reserva después de verificar' => str_contains($authJs, "'channel/reserve'"),
-    'servicio expone pairing pendiente' => str_contains($service, 'pendingForUser'),
-    'servicio permite re-pairing con solicitud vigente' => str_contains($service, "status IN (\\'binding_pending\\', \\'paired\\')"),
-    'servicio documenta binding_pending como entrada normal' => str_contains($service, 'Normal onboarding enters through binding_pending.'),
+    'auth js no depende de intent' => !str_contains($authJs, 'onboardingIntent') && !str_contains($authJs, 'channel/reserve'),
+    'resolver no emite intent en la URL' => !str_contains($resolver, 'Token::issue') && !str_contains($resolver, 'http_build_query'),
+    'servicio no usa polling de pairing para visibilidad' => !str_contains($service, 'pendingForUser') && !str_contains($service, 'hasActivePairingState'),
+    'dashboard no consulta estado para mostrar el formulario' => !str_contains($authJs, 'channel/pending') && !str_contains(file_get_contents(__DIR__ . '/../public/dashboard.php'), 'pendingForUser'),
     'servicio aprueba pairing y vincula después' => str_contains($service, 'approvePairing') && str_contains($service, 'bindPeer'),
     'pairing valida códigos alfanuméricos' => str_contains($pairing, "^[A-Za-z0-9]{6,12}$"),
     'pairing lista solicitudes antes de aprobar' => str_contains($pairing, "'pairing', 'list'") && str_contains($pairing, "'pairing', 'approve'"),
     'pairing valida identidad esperada' => str_contains($pairing, 'expectedIdentity'),
     'bindings priorizan peers directos' => str_contains($manager, 'array_merge($peerBindings, $fallbackBindings)'),
-    'plugin notifica evento de pairing' => str_contains($plugin, 'pairingEventUrl') && str_contains($plugin, 'pairing_created'),
-    'endpoint exige secreto de evento' => str_contains($pairingEvent, 'HTTP_X_WEBCHAT_PAIRING_SECRET'),
-    'endpoint persiste evento de pairing' => str_contains($pairingEvent, 'recordPairingEvent'),
-    'servicio consulta estado activo' => str_contains($service, 'hasActivePairingState') && str_contains($service, 'pairing_state'),
+    'plugin ya no depende de eventos para mostrar el formulario' => !str_contains($plugin, 'pairingEventUrl') && !str_contains($plugin, 'notifyPairingEvent'),
+    'relay no mantiene estado duplicado de pairing' => !str_contains(file_get_contents(__DIR__ . '/../src/WebSocket/RelayServer.php'), 'PairingEventBus'),
+    'pairing obtiene identidad desde solicitud nativa' => str_contains($pairing, 'identityFromRequest'),
 ];
 
 $failed = array_keys(array_filter($assertions, static fn (bool $passed): bool => !$passed));

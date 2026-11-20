@@ -15,8 +15,9 @@ identidad externa
 ```
 
 `public/channel.php` implementa el contrato mínimo para que un adaptador consulte si una
-identidad está registrada. Una identidad desconocida recibe `registered: false` y la URL
-del WebChat. No se crea sesión ni se envía el mensaje al agente `main`.
+identidad está registrada. Una identidad desconocida recibe `registered: false` y una URL
+genérica de WebChat. No se crea sesión ni se envía el mensaje al agente
+`main`; OpenClaw continúa su flujo nativo de `dmPolicy: pairing` para generar el código.
 
 ## Pairing
 
@@ -24,19 +25,16 @@ WebChat no genera códigos: OpenClaw los crea y los mantiene como autoridad nati
 WebChat sí muestra el código recibido, persiste el estado actual y ejecuta el formulario
 que llama a `openclaw pairing approve <canal> <código>` desde el backend.
 
-Cuando un remitente desconocido abre la invitación de WebChat, el canal y su
-identificador se conservan durante el registro o inicio de sesión. Tras autenticar
-la cuenta, WebChat registra la identidad como `binding_pending`; después OpenClaw continúa
-con su pairing nativo y bloquea el acceso hasta que el código sea aprobado. La interfaz solo
-muestra el apartado cuando existe una solicitud vigente.
+Cuando un remitente escribe por primera vez, el plugin deja pasar el pairing nativo y agrega
+al mismo mensaje el enlace de WebChat, el código y el contacto de soporte. El usuario puede
+registrarse o iniciar sesión desde ese enlace y captura el código. El backend valida el código
+contra la solicitud nativa de OpenClaw, obtiene de ella la identidad real y crea `binding_pending`
+antes de completar el binding. La URL no transporta un intent ni una identidad confiable.
 
-`pairing_state` contiene una sola solicitud activa por identidad y canal. `pairing_events`
-es histórico y registra creación, aprobación, expiración o reemplazo; no se consulta para
-decidir la visibilidad normal del apartado.
-
-La actualización principal llega por el evento `pairing.updated` del relay. El navegador
-hace una consulta inicial al abrir el dashboard y usa polling de 30 segundos únicamente
-durante una desconexión del WebSocket.
+Las tablas históricas `pairing_state` y `pairing_events` pueden existir en instalaciones
+anteriores, pero ya no participan en el flujo activo. La interfaz no hace polling ni recibe
+eventos de pairing para decidir si muestra el formulario: el formulario está disponible
+para el usuario autenticado y OpenClaw valida el código al aprobarlo.
 
 El core de la aplicación mantiene la asociación entre `canal + identificador externo`
 y el agente correspondiente. Aprobar el pairing de OpenClaw autoriza al remitente a

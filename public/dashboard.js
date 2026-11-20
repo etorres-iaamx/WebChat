@@ -35,7 +35,6 @@
     const passwordForm = document.querySelector('[data-password-form]');
     const passwordStatus = document.querySelector('[data-password-status]');
     const pairingForms = document.querySelectorAll('[data-pairing-form]');
-    const pairingContainer = document.querySelector('[data-pairing-container]');
     const avatarImages = document.querySelectorAll('[data-avatar-image]');
     const avatarFallbacks = document.querySelectorAll('[data-avatar-fallback]');
     const settingsPanel = document.querySelector('[data-settings-panel]');
@@ -63,8 +62,6 @@
     let popupMonitor = null;
     let redirectingToAuth = false;
     let sourceModeBeforePopup = 'floating';
-    let emptyPairingPolls = 0;
-    let pairingPollTimer = null;
     const messages = new Map();
     const pendingOutbound = [];
     const inFlightOutbound = new Map();
@@ -218,7 +215,6 @@
             setFormStatus(status, 'Pairing completado. Tu canal ya está vinculado a tu agente.');
             pairingForm.querySelector('input')?.setAttribute('disabled', 'disabled');
             button?.remove();
-            await refreshPairingOptions();
         } catch (error) {
             setFormStatus(status, error.message, true);
         } finally {
@@ -228,73 +224,6 @@
 
     function bindPairingForm(pairingForm) {
         pairingForm.addEventListener('submit', approvePairing);
-    }
-
-    function renderPairingOptions(channels) {
-        if (!pairingContainer) return;
-        const nextChannels = channels
-            .map((pending) => String(pending?.channel || '').trim().toLowerCase())
-            .filter((channel) => ['telegram', 'whatsapp'].includes(channel));
-        const currentChannels = Array.from(pairingContainer.querySelectorAll('[data-pairing-form]'))
-            .map((form) => String(form.dataset.channel || '').trim().toLowerCase());
-        if (currentChannels.length === nextChannels.length && currentChannels.every((channel, index) => channel === nextChannels[index])) return;
-        pairingContainer.replaceChildren();
-        nextChannels.forEach((channel) => {
-
-            const details = document.createElement('details');
-            details.className = 'profile-option';
-            details.open = true;
-            const summary = document.createElement('summary');
-            summary.innerHTML = '<span class="profile-option__icon" aria-hidden="true">⌁</span>'
-                + '<span><strong></strong><small>Introduce el código que te entrega el bot.</small></span>'
-                + '<span class="profile-option__status">Pendiente</span>';
-            summary.querySelector('strong').textContent = `Completar pairing de ${channel.charAt(0).toUpperCase()}${channel.slice(1)}`;
-            const form = document.createElement('form');
-            form.className = 'profile-form pairing-form';
-            form.dataset.pairingForm = '';
-            form.dataset.channel = channel;
-            form.innerHTML = '<label>Código de pairing<input name="code" inputmode="text" minlength="6" maxlength="12" autocomplete="one-time-code" required></label>'
-                + '<button class="profile-action" type="submit">Aprobar pairing</button>'
-                + '<p class="profile-form__status" data-pairing-status role="status" aria-live="polite"></p>';
-            details.append(summary, form);
-            pairingContainer.append(details);
-            bindPairingForm(form);
-        });
-    }
-
-    async function refreshPairingOptions() {
-        if (!pairingContainer) return;
-        try {
-            const response = await fetch(`${basePath}/api.php?action=channel/pending`, {credentials: 'same-origin', headers: {Accept: 'application/json'}});
-            const payload = await readApiResponse(response);
-            // readApiResponse() already unwraps the API envelope and returns
-            // the `data` object. Looking under `payload.data` made every
-            // successful response look like an empty pairing list.
-            const channels = Array.isArray(payload?.channels) ? payload.channels : [];
-            const currentPairingCount = pairingContainer.querySelectorAll('[data-pairing-form]').length;
-            if (channels.length === 0 && currentPairingCount > 0) {
-                // Do not remove a just-delivered code because of one transient
-                // CLI/Gateway read. Require three consecutive empty polls.
-                emptyPairingPolls += 1;
-                if (emptyPairingPolls < 3) return;
-            } else if (channels.length > 0) {
-                emptyPairingPolls = 0;
-            } else {
-                emptyPairingPolls = 0;
-            }
-            renderPairingOptions(channels);
-        } catch (_) {
-            // Keep the current state visible if a transient poll fails.
-        }
-    }
-
-    function setPairingPolling(enabled) {
-        if (enabled && pairingPollTimer === null) {
-            pairingPollTimer = window.setInterval(refreshPairingOptions, 30000);
-        } else if (!enabled && pairingPollTimer !== null) {
-            window.clearInterval(pairingPollTimer);
-            pairingPollTimer = null;
-        }
     }
 
     function messageId(message) {
@@ -452,8 +381,6 @@
         socket.addEventListener('open', () => {
             connectInProgress = false;
             reconnectAttempts = 0;
-            setPairingPolling(false);
-            void refreshPairingOptions();
             sendRaw({ type: 'connect', token: config.token });
         });
         socket.addEventListener('message', (event) => {
@@ -471,7 +398,6 @@
             gatewayHistoryLoaded = false;
             setTyping(false);
             setConnection('error', 'Desconectado');
-            setPairingPolling(true);
             scheduleReconnect();
         });
     }
@@ -491,9 +417,6 @@
                 break;
             case 'gateway.reconnected':
                 setConnection('connected', 'Conectado');
-                break;
-            case 'pairing.updated':
-                void refreshPairingOptions();
                 break;
             case 'typing':
                 setTyping(Boolean(payload.on));
@@ -800,8 +723,6 @@
     });
     passwordForm?.addEventListener('submit', changePassword);
     pairingForms.forEach(bindPairingForm);
-    refreshPairingOptions();
-    setPairingPolling(true);
     document.querySelectorAll('[data-setting-help]').forEach((button) => button.addEventListener('click', () => {
         const help = document.getElementById(button.dataset.settingHelp || '');
         if (!help) return;

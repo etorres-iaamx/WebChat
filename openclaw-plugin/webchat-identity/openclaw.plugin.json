@@ -4,15 +4,13 @@
   "activation": {"onStartup": true},
   "name": "WebChat identity routing",
   "kind": "feature",
-  "description": "Claims unregistered Telegram and WhatsApp messages and sends the WebChat registration link.",
+  "description": "Enriches native Telegram and WhatsApp pairing replies with the WebChat onboarding link and support contact.",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
       "resolveUrl": {"type": "string", "format": "uri"},
       "resolveSecret": {"type": "string", "minLength": 16},
-      "pairingEventUrl": {"type": "string", "format": "uri"},
-      "pairingEventSecret": {"type": "string", "minLength": 16},
       "publicBaseUrl": {"type": "string", "format": "uri"},
       "adminIdentities": {"type": "array", "items": {"type": "string", "minLength": 3}},
       "supportEmail": {"type": "string", "format": "email"},

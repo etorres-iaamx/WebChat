@@ -12,7 +12,6 @@ use Webchat\App\Token;
 use Webchat\Gateway\GatewayException;
 use Webchat\Gateway\OpenClawClient;
 use Webchat\Repository\ChatRepository;
-use Webchat\Runtime\PairingEventBus;
 
 final class RelayServer
 {
@@ -22,7 +21,6 @@ final class RelayServer
     private ?ChatRepository $repository = null;
     /** @var array<string,string> */
     private array $activeRunText = [];
-    private $pairingEvents = null;
 
     public function __construct(private readonly Config $config)
     {
@@ -210,7 +208,6 @@ final class RelayServer
         $browserStream = $browser->stream();
         $gatewayStream = $gateway->stream();
         $lastPingAt = microtime(true);
-        $this->pairingEvents = (new PairingEventBus($this->config))->openCursor();
         $active = true;
 
         while ($active) {
@@ -259,31 +256,12 @@ final class RelayServer
                 $this->handleGatewayFrame($browser, $session, $event);
             }
 
-            foreach ((new PairingEventBus($this->config))->drain($this->pairingEvents) as $event) {
-                if (!$this->pairingEventBelongsToSession($event, $session)) continue;
-                $browser->sendJson(['type' => 'pairing.updated', 'event' => (string) ($event['event'] ?? '')]);
-            }
-
             if (microtime(true) - $lastPingAt >= 25.0) {
                 $browser->sendPing('iaamx');
                 $gateway->sendPing('webchat');
                 $lastPingAt = microtime(true);
             }
         }
-        if (is_resource($this->pairingEvents)) fclose($this->pairingEvents);
-        $this->pairingEvents = null;
-    }
-
-    /** @param array<string,mixed> $event @param array<string,mixed> $session */
-    private function pairingEventBelongsToSession(array $event, array $session): bool
-    {
-        $channel = trim((string) ($event['channel'] ?? ''));
-        $identity = trim((string) ($event['external_identity'] ?? ''));
-        if ($channel === '' || $identity === '') return false;
-        $pdo = (new Database($this->config))->pdo();
-        $query = $pdo->prepare('SELECT 1 FROM channel_identities WHERE user_id = :user_id AND channel = :channel AND external_identity = :identity LIMIT 1');
-        $query->execute(['user_id' => (int) ($session['user_id'] ?? 0), 'channel' => $channel, 'identity' => $identity]);
-        return $query->fetchColumn() !== false;
     }
 
     /** @return array{0: OpenClawClient, 1: list<array<string,mixed>>} */

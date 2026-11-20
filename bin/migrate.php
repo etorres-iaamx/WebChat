@@ -29,6 +29,19 @@ $pdo->exec(<<<'SQL'
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     SQL);
 
+$freshInstall = (int) $pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn() === 0;
+$obsoleteOnFreshInstall = [
+    '003_pairing_attempts',
+    '010_pairing_events',
+    '011_pairing_events_active_identity',
+    '012_pairing_state',
+    '013_drop_legacy_pairing_attempts',
+    '014_drop_legacy_pairing_state',
+];
+$requiresDrop = ['013_drop_legacy_pairing_attempts', '014_drop_legacy_pairing_state'];
+$dropPrivilegeChecked = false;
+$hasDropPrivilege = false;
+
 foreach ($files as $file) {
     $version = basename($file, '.sql');
     $check = $pdo->prepare('SELECT 1 FROM schema_migrations WHERE version = :version LIMIT 1');
@@ -36,6 +49,28 @@ foreach ($files as $file) {
     if ($check->fetchColumn() !== false) {
         printf("SKIP %s\n", $version);
         continue;
+    }
+
+    if ($freshInstall && in_array($version, $obsoleteOnFreshInstall, true)) {
+        printf("SKIP LEGACY %s\n", $version);
+        $pdo->prepare('INSERT INTO schema_migrations (version) VALUES (:version)')->execute(['version' => $version]);
+        continue;
+    }
+
+    if (in_array($version, $requiresDrop, true) && !$dropPrivilegeChecked) {
+        $dropPrivilegeChecked = true;
+        $databaseName = strtoupper((string) $config->get('DB_DATABASE', ''));
+        foreach ($pdo->query('SHOW GRANTS') as $grant) {
+            $text = strtoupper(implode(' ', array_map('strval', $grant)));
+            $onDatabase = str_contains($text, 'ON *.*') || ($databaseName !== '' && str_contains($text, '`' . $databaseName . '`.*'));
+            if ($onDatabase && (str_contains($text, 'ALL PRIVILEGES') || preg_match('/\\bDROP\\b/', $text))) {
+                $hasDropPrivilege = true;
+                break;
+            }
+        }
+        if (!$hasDropPrivilege) {
+            throw new RuntimeException('Las migraciones de limpieza requieren un usuario DBA con privilegio DROP. Ejecútalas con la cuenta administradora de la instancia WebChat y vuelve a ejecutar bin/migrate.php. No se aplicaron cambios.');
+        }
     }
 
     printf("APPLY %s\n", $version);
