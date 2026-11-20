@@ -237,6 +237,11 @@ ejemplo cada minuto:
 php bin/provision-pending.php 10
 ```
 
+El worker también ejecuta mantenimiento seguro: elimina sesiones expiradas, códigos usados
+o vencidos después de 30 días, correlaciones `relay_requests` después de 30 días y eventos
+`audit_events` después de 180 días. Ajusta esos periodos con
+`WEBCHAT_RETENTION_VERIFICATION_DAYS`, `WEBCHAT_RETENTION_RELAY_DAYS` y
+`WEBCHAT_RETENTION_AUDIT_DAYS`. Nunca elimina usuarios, agentes, identidades ni conversaciones.
 El worker es seguro para reintentar: los bindings existentes se reutilizan y los errores
 técnicos se conservan solo en logs y en el estado interno del job.
 

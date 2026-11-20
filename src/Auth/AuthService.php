@@ -155,6 +155,40 @@ final class AuthService
         return $processed;
     }
 
+    /** @return array<string, int> */
+    public function cleanupExpiredData(): array
+    {
+        $verificationDays = $this->retentionDays('WEBCHAT_RETENTION_VERIFICATION_DAYS', 30);
+        $relayDays = $this->retentionDays('WEBCHAT_RETENTION_RELAY_DAYS', 30);
+        $auditDays = $this->retentionDays('WEBCHAT_RETENTION_AUDIT_DAYS', 180);
+        $pdo = $this->database->pdo();
+
+        $deleted = [
+            'auth_sessions' => $pdo->exec('DELETE FROM auth_sessions WHERE expires_at <= UTC_TIMESTAMP(6)'),
+            'web_sessions' => $pdo->exec('DELETE FROM web_sessions WHERE expires_at <= UTC_TIMESTAMP(6)'),
+            'verification_codes' => $pdo->exec(sprintf(
+                'DELETE FROM verification_codes WHERE (used_at IS NOT NULL AND used_at < DATE_SUB(UTC_TIMESTAMP(6), INTERVAL %d DAY)) OR (used_at IS NULL AND expires_at < DATE_SUB(UTC_TIMESTAMP(6), INTERVAL %d DAY))',
+                $verificationDays,
+                $verificationDays,
+            )),
+            'relay_requests' => $pdo->exec(sprintf(
+                'DELETE FROM relay_requests WHERE created_at < DATE_SUB(UTC_TIMESTAMP(6), INTERVAL %d DAY)',
+                $relayDays,
+            )),
+            'audit_events' => $pdo->exec(sprintf(
+                'DELETE FROM audit_events WHERE created_at < DATE_SUB(UTC_TIMESTAMP(6), INTERVAL %d DAY)',
+                $auditDays,
+            )),
+        ];
+
+        return array_map(static fn (false|int $count): int => (int) $count, $deleted);
+    }
+
+    private function retentionDays(string $key, int $default): int
+    {
+        return max(1, min(3650, $this->config->int($key, $default)));
+    }
+
     private function provisionRuntimes(int $userId): void
     {
         if ($this->config->bool('OPENCLAW_PROVISIONING_ENABLED', false)) {
