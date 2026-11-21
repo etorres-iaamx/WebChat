@@ -1,0 +1,40 @@
+services:
+  webchat-agent-example:
+    build:
+      context: .
+      args:
+        OPENCLAW_VERSION: "2026.9.4"
+    image: webchat-agent:2026.9.4
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    environment:
+      OPENCLAW_GATEWAY_TOKEN: "replace-with-a-generated-token"
+      OPENCLAW_GATEWAY_PORT: "18789"
+    expose:
+      - "18789"
+    volumes:
+      - webchat-agent-example:/var/lib/openclaw
+    networks:
+      - webchat-agent-example
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    cpus: "0.50"
+    mem_limit: 1g
+    memswap_limit: 1g
+    ports: []
+
+networks:
+  webchat-agent-example:
+    name: webchat-agent-example
+    driver: bridge
+
+volumes:
+  webchat-agent-example:
+    name: webchat-agent-example-data
