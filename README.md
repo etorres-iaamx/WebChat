@@ -65,14 +65,6 @@ Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_EN
 y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 `memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
-Los paquetes adicionales de cada agente se registran en
-`.webchat/packages.manifest` dentro de su workspace. El helper
-`runtime/package_manifest.py` valida esa lista y puede reinstalar entradas `apt`,
-`pip` o `npm` durante el arranque de un runtime nuevo. El manifiesto se conserva
-en el volumen persistente del agente y no requiere acceso al Docker socket.
-Consulta [docs/package-manifests.md](docs/package-manifests.md) para el formato y
-los comandos disponibles.
-
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-200/201/202/203/204:
 dashboard con barra lateral, fondo de oficina y asistente contextual. El perfil del
 usuario se muestra en la barra lateral para mantener despejada el área central. En esta etapa la
