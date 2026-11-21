@@ -65,19 +65,6 @@ Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_EN
 y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 `memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
-### Aislamiento fuerte con Docker
-
-La primera definición portable del runtime está en `docker/agent/` y se documenta
-en [`docs/docker-isolation.md`](docs/docker-isolation.md). El modelo asigna un
-Gateway OpenClaw y un volumen persistente por usuario, sin Docker socket, modo
-privilegiado, red del host ni puertos publicados. WebChat y su MariaDB central
-permanecen fuera de esos contenedores.
-
-El instalador actual no instala Docker ni activa este modo automáticamente. El
-host debe tener Docker Engine/Compose y el orquestador dinámico se incorporará
-después de validar la imagen con un agente temporal. Esta separación evita afectar
-la instalación lógica actual mientras se prueba el nuevo runtime.
-
 Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-200/201/202/203/204:
 dashboard con barra lateral, fondo de oficina y asistente contextual. El perfil del
 usuario se muestra en la barra lateral para mantener despejada el área central. En esta etapa la
