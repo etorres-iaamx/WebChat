@@ -68,6 +68,10 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
         f"- País/código: {profile_value(args.country_code) or 'No proporcionado'}\n"
         f"- Identificador WebChat: {profile_value(args.agent_public_id)}\n"
     ))
+    atomic_write(Path(workspace) / ".webchat" / "packages.manifest", (
+        "# WebChat per-agent packages; one '<manager> <package>' per line.\n"
+        "# Supported managers: apt, pip, npm.\n"
+    ))
     return {"external_agent_id": str(external), "workspace": workspace}
 
 
