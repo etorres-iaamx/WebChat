@@ -51,7 +51,7 @@ export default {
 
     async function pairingDestination(channelValue, identityValue) {
       const channel = normalizeChannel(channelValue);
-      const identity = asText(identityValue);
+      const identity = normalizeChannelIdentity(channel || "", asText(identityValue));
       if (!channel || !identity) return null;
       const fallback = fallbackWebchatUrl();
       const controller = new AbortController();

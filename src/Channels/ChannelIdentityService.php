@@ -20,6 +20,7 @@ final class ChannelIdentityService
     public function resolve(string $channel, string $externalIdentity): ?array
     {
         $this->assertChannel($channel);
+        $externalIdentity = $this->normalizeIdentity($channel, $externalIdentity);
         $statement = $this->database->pdo()->prepare('SELECT ci.user_id, ci.channel, ci.external_identity, u.public_id AS user_public_id, la.public_id AS agent_public_id, rb.external_agent_id FROM channel_identities ci INNER JOIN users u ON u.id = ci.user_id INNER JOIN logical_agents la ON la.user_id = u.id INNER JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = \'openclaw\' AND rb.status = \'active\' AND rb.external_agent_id IS NOT NULL AND rb.external_agent_id <> \'\' WHERE ci.channel = :channel AND ci.external_identity = :identity AND ci.status = \'paired\' AND u.status = \'active\' LIMIT 1');
         $statement->execute(['channel' => $channel, 'identity' => trim($externalIdentity)]);
         $row = $statement->fetch();
@@ -29,6 +30,7 @@ final class ChannelIdentityService
     public function state(string $channel, string $externalIdentity): ?string
     {
         $this->assertChannel($channel);
+        $externalIdentity = $this->normalizeIdentity($channel, $externalIdentity);
         $statement = $this->database->pdo()->prepare('SELECT status FROM channel_identities WHERE channel = :channel AND external_identity = :identity LIMIT 1');
         $statement->execute(['channel' => $channel, 'identity' => trim($externalIdentity)]);
         $status = $statement->fetchColumn();
@@ -38,7 +40,7 @@ final class ChannelIdentityService
     public function reserve(int $userId, string $channel, string $externalIdentity): void
     {
         $this->assertChannel($channel);
-        $externalIdentity = trim($externalIdentity);
+        $externalIdentity = $this->normalizeIdentity($channel, $externalIdentity);
         if ($externalIdentity === '' || strlen($externalIdentity) > 255) {
             throw new RuntimeException('La identidad del canal no es válida.');
         }
@@ -68,7 +70,7 @@ final class ChannelIdentityService
         $pairing = new OpenClawPairingManager($this->config);
         $request = $pairing->pendingRequestForCode($channel, $code);
         if ($request === null) throw new RuntimeException('El código no está pendiente o expiró.');
-        $externalIdentity = $pairing->identityFromRequest($request);
+        $externalIdentity = $pairing->identityFromRequest($channel, $request);
         if ($externalIdentity === null) throw new RuntimeException('OpenClaw no devolvió la identidad del pairing.');
 
         // The Telegram/WhatsApp code is the only onboarding credential.
@@ -88,5 +90,18 @@ final class ChannelIdentityService
         if (!in_array($channel, ['telegram', 'whatsapp'], true)) {
             throw new RuntimeException('Canal no soportado.');
         }
+    }
+
+    private function normalizeIdentity(string $channel, string $identity): string
+    {
+        $identity = trim($identity);
+        $identity = preg_replace('/^' . preg_quote(strtolower($channel), '/') . ':/i', '', $identity) ?? $identity;
+        if (strtolower($channel) === 'whatsapp') {
+            $identity = explode('@', $identity, 2)[0];
+            if (preg_match('/^[0-9]{10,15}$/', $identity)) {
+                $identity = '+' . $identity;
+            }
+        }
+        return trim($identity);
     }
 }

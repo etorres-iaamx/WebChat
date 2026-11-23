@@ -40,6 +40,6 @@ El core de la aplicación mantiene la asociación entre `canal + identificador e
 y el agente correspondiente. Aprobar el pairing de OpenClaw autoriza al remitente a
 hablar con el bot; no crea un agente ni sustituye el routing del core.
 
-La integración específica con el Gateway se conectará cuando el canal real esté activo.
-La cuenta de WhatsApp del entorno actualmente aparece desconectada; no se debe marcar
-como operativa hasta completar `openclaw channels login --channel whatsapp`.
+La integración específica con el Gateway está activa para Telegram y WhatsApp. WhatsApp
+debe tener una cuenta vinculada y el canal conectado en OpenClaw; además, `WHATSAPP_BOT_URL`
+puede configurarse opcionalmente para enlazar directamente al bot desde Perfil.

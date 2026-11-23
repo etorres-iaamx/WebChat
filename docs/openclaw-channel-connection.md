@@ -52,4 +52,8 @@ que eliminarla para que el siguiente mensaje cree una sesión bajo el agente cor
 
 ## WhatsApp
 
-La lógica está lista, pero el canal debe estar autenticado en OpenClaw. La primera conexión requiere ejecutar el login de WhatsApp y escanear el QR en el host. Mientras el canal esté desconectado no es posible hacer una prueba real de extremo a extremo.
+WhatsApp usa el mismo resolver, código nativo y binding directo que Telegram. Las identidades
+de WhatsApp se normalizan desde JID o número hacia el formato `+<número>` antes de resolver,
+reservar o crear el binding. OpenClaw reporta el canal WhatsApp conectado y vinculado; el flujo
+solo requiere que `WHATSAPP_BOT_URL` tenga el enlace público correspondiente si se desea
+mostrarlo directamente desde Perfil.

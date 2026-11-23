@@ -65,7 +65,7 @@ Para provisionar también un Profile de Hermes, habilita `HERMES_PROVISIONING_EN
 y configura `HERMES_HOME`. El perfil recibe contexto aislado (`SOUL.md`,
 `memories/USER.md` y `AGENTS.md`) mediante el adapter Python embebido.
 
-Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-200/201/202/203/204:
+Webchat PHP 8.3 puro para IAAMXORG, basado en los mockups IAADL-205/206:
 dashboard con barra lateral, fondo de oficina y asistente contextual. El perfil del
 usuario se muestra en la barra lateral para mantener despejada el área central. En esta etapa la
 interfaz solo expone controles con funcionalidad implementada: Asistente de IA, Perfil y Ajustes,
@@ -82,9 +82,10 @@ Después de autenticar, redirige directamente al dashboard protegido en
 `/webchat/webchat/index.php` no son públicas y responden `404`; el dashboard se sirve
 internamente mediante el rewrite de Caddy.
 
-Perfil reserva opciones para foto de perfil, cambio de contraseña y vinculación de
-Telegram/WhatsApp. Actualmente se muestran deshabilitadas como “Próximamente”; no
-simulan operaciones ni crean endpoints hasta implementar sus servicios.
+Perfil incluye foto de perfil, cambio de contraseña y el formulario de pairing de
+Telegram/WhatsApp. La foto y la contraseña tienen endpoints reales, y el formulario
+valida el código nativo mediante el Gateway de OpenClaw. Telegram y WhatsApp solo se
+exponen como enlaces o canales operativos cuando su configuración está disponible.
 
 Cada opción de Ajustes incluye ayuda contextual accesible mediante un icono `?`; las
 explicaciones indican el efecto de la preferencia antes de guardarla. El mismo texto

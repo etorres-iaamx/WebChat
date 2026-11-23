@@ -60,6 +60,9 @@ $assertions = [
     'plugin ya no depende de eventos para mostrar el formulario' => !str_contains($plugin, 'pairingEventUrl') && !str_contains($plugin, 'notifyPairingEvent'),
     'relay no mantiene estado duplicado de pairing' => !str_contains(file_get_contents(__DIR__ . '/../src/WebSocket/RelayServer.php'), 'PairingEventBus'),
     'pairing obtiene identidad desde solicitud nativa' => str_contains($pairing, 'identityFromRequest'),
+    'pairing normaliza identidad WhatsApp en el backend' => str_contains($pairing, 'normalizeIdentityValue') && str_contains($pairing, 'explode(\'@\', $identity, 2)'),
+    'servicio normaliza WhatsApp antes de resolver y reservar' => str_contains($service, 'normalizeIdentity') && str_contains($service, 'explode(\'@\', $identity, 2)'),
+    'plugin normaliza identidad antes de consultar el resolver' => str_contains($plugin, 'const identity = normalizeChannelIdentity(channel || "", asText(identityValue));'),
 ];
 
 $failed = array_keys(array_filter($assertions, static fn (bool $passed): bool => !$passed));

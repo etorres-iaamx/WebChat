@@ -36,7 +36,9 @@ final class OpenClawPairingManager
                 $request['from'] ?? null,
                 $request['senderId'] ?? null,
             ], static fn (mixed $value): bool => is_scalar($value) && trim((string) $value) !== '');
-            if ($requestIdentities !== [] && !in_array($expectedIdentity, array_map(static fn (mixed $value): string => trim((string) $value), $requestIdentities), true)) {
+            $normalizedRequestIdentities = array_map(fn (mixed $value): string => $this->normalizeIdentityValue($channel, trim((string) $value)), $requestIdentities);
+            $normalizedExpectedIdentity = $this->normalizeIdentityValue($channel, $expectedIdentity);
+            if ($normalizedRequestIdentities !== [] && !in_array($normalizedExpectedIdentity, $normalizedRequestIdentities, true)) {
                 throw new RuntimeException('El código pertenece a otra identidad de canal.');
             }
         }
@@ -63,7 +65,7 @@ final class OpenClawPairingManager
         return null;
     }
 
-    public function identityFromRequest(array $request): ?string
+    public function identityFromRequest(string $channel, array $request): ?string
     {
         $candidates = [
             $request['externalIdentity'] ?? null,
@@ -85,9 +87,22 @@ final class OpenClawPairingManager
         }
         foreach ($candidates as $candidate) {
             $value = is_scalar($candidate) ? trim((string) $candidate) : '';
-            if ($value !== '') return $value;
+            if ($value !== '') return $this->normalizeIdentityValue($channel, $value);
         }
         return null;
+    }
+
+    private function normalizeIdentityValue(string $channel, string $identity): string
+    {
+        $identity = trim($identity);
+        $identity = preg_replace('/^' . preg_quote(strtolower($channel), '/') . ':/i', '', $identity) ?? $identity;
+        if (strtolower($channel) === 'whatsapp') {
+            $identity = explode('@', $identity, 2)[0];
+            if (preg_match('/^[0-9]{10,15}$/', $identity)) {
+                $identity = '+' . $identity;
+            }
+        }
+        return trim($identity);
     }
 
     /** @return list<array<string,mixed>> */
