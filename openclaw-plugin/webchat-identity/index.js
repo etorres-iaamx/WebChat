@@ -14,6 +14,15 @@ function normalizeIdentity(value) {
   return identity.includes(":") ? identity.toLowerCase() : identity;
 }
 
+function normalizeChannelIdentity(channel, value) {
+  let identity = asText(value).replace(new RegExp(`^${channel}:`, "i"), "");
+  identity = identity.split("@", 1)[0];
+  if (channel === "whatsapp" && /^\d{10,15}$/.test(identity)) {
+    return `+${identity}`;
+  }
+  return identity;
+}
+
 export default {
   id: "webchat-identity",
   name: "WebChat identity routing",
@@ -36,7 +45,8 @@ export default {
     }
 
     function pairingKey(channel, identity) {
-      return `${normalizeChannel(channel) || ""}:${asText(identity)}`;
+      const normalizedChannel = normalizeChannel(channel);
+      return `${normalizedChannel || ""}:${normalizeChannelIdentity(normalizedChannel || "", identity)}`;
     }
 
     async function pairingDestination(channelValue, identityValue) {
@@ -80,11 +90,10 @@ export default {
       if (!channel || !identity || adminIdentities.has(normalizeIdentity(`${channel}:${identity}`))) return;
       const key = pairingKey(channel, identity);
       const destination = pairingDestination(channel, identity);
+      // Store the code synchronously. OpenClaw issues the hook without awaiting
+      // it, then sends the native pairing reply immediately.
+      pairingRequests.set(key, asText(event.code));
       pairingEligibility.set(key, destination);
-      void destination.then((resolved) => {
-        if (!resolved) return;
-        pairingRequests.set(key, asText(event.code));
-      });
       setTimeout(() => {
         pairingRequests.delete(key);
         pairingEligibility.delete(key);

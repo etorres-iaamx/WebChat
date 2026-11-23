@@ -68,8 +68,7 @@ $avatarUrl = !empty($authUser['has_avatar'])
 $telegramBotUrl = trim((string) $config->get('TELEGRAM_BOT_URL', ''));
 $whatsappBotUrl = trim((string) $config->get('WHATSAPP_BOT_URL', ''));
 $pairingChannels = array_values(array_unique(array_merge(
-    ['telegram'],
-    $whatsappBotUrl !== '' ? ['whatsapp'] : [],
+    ['telegram', 'whatsapp'],
 )));
 $clientConfig = json_encode([
     'token' => $relayToken,

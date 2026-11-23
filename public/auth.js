@@ -74,7 +74,7 @@
         setStatus('No fue posible completar la operación. Intenta nuevamente más tarde.', true);
         return;
       }
-      setStatus('Correo verificado. Ya puedes iniciar sesión y completar el pairing con el código de Telegram.');
+      setStatus('Correo verificado. Ya puedes iniciar sesión y completar el pairing con el código de Telegram o WhatsApp.');
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) {
