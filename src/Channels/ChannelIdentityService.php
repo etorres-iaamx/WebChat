@@ -37,6 +37,23 @@ final class ChannelIdentityService
         return is_string($status) && $status !== '' ? $status : null;
     }
 
+    /** @return array<string,string> */
+    public function statesForUser(int $userId): array
+    {
+        $statement = $this->database->pdo()->prepare('SELECT channel, status FROM channel_identities WHERE user_id = :user_id');
+        $statement->execute(['user_id' => $userId]);
+        $states = [];
+        foreach ($statement->fetchAll() as $row) {
+            if (!is_array($row)) continue;
+            $channel = (string) ($row['channel'] ?? '');
+            $status = (string) ($row['status'] ?? '');
+            if (in_array($channel, ['telegram', 'whatsapp'], true) && $status !== '') {
+                $states[$channel] = $status;
+            }
+        }
+        return $states;
+    }
+
     public function reserve(int $userId, string $channel, string $externalIdentity): void
     {
         $this->assertChannel($channel);
@@ -83,6 +100,23 @@ final class ChannelIdentityService
             throw new RuntimeException('No fue posible completar el binding del canal en OpenClaw.', 0, $error);
         }
         $this->database->pdo()->prepare('UPDATE channel_identities SET status = \'paired\' WHERE user_id = :user_id AND channel = :channel AND external_identity = :identity')->execute(['user_id' => $userId, 'channel' => $channel, 'identity' => $externalIdentity]);
+    }
+
+    public function unpairUser(int $userId): void
+    {
+        $statement = $this->database->pdo()->prepare('SELECT channel, external_identity FROM channel_identities WHERE user_id = :user_id');
+        $statement->execute(['user_id' => $userId]);
+        $identities = $statement->fetchAll();
+        $bindingManager = new OpenClawBindingManager($this->config);
+        foreach ($identities as $identity) {
+            if (!is_array($identity)) continue;
+            $channel = (string) ($identity['channel'] ?? '');
+            $externalIdentity = (string) ($identity['external_identity'] ?? '');
+            if (in_array($channel, ['telegram', 'whatsapp'], true) && $externalIdentity !== '') {
+                $bindingManager->unbindPeer($channel, $externalIdentity);
+            }
+        }
+        $this->database->pdo()->prepare('DELETE FROM channel_identities WHERE user_id = :user_id')->execute(['user_id' => $userId]);
     }
 
     private function assertChannel(string $channel): void

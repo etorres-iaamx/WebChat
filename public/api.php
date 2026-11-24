@@ -57,6 +57,13 @@ try {
         setcookie(auth_cookie_name(), '', array_merge(auth_cookie_options(), ['expires' => time() - 3600]));
         json_response(['ok' => true]);
     }
+    if ($action === 'account/delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId = $auth->userIdFromSession(auth_token());
+        if ($userId === null) json_response(['ok' => false, 'error' => 'Debes iniciar sesión.'], 401);
+        $auth->deleteAccount($userId);
+        setcookie(auth_cookie_name(), '', array_merge(auth_cookie_options(), ['expires' => time() - 3600]));
+        json_response(['ok' => true]);
+    }
     if ($action === 'me') {
         $user = $auth->userFromSession(auth_token());
         json_response(['ok' => true, 'authenticated' => $user !== null, 'user' => $user]);

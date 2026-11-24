@@ -100,22 +100,72 @@ export default {
       }, 15 * 60 * 1000);
     });
 
-    // The native adapter already sends the pairing code. Append the WebChat
-    // destination and support email to that same outbound message.
+    async function enrichPairingPayload(channel, targets, content) {
+      const normalizedChannel = normalizeChannel(channel);
+      if (!normalizedChannel) return null;
+      const candidates = Array.isArray(targets) ? targets : [targets];
+      for (const target of candidates) {
+        const normalizedTarget = asText(target).replace(new RegExp(`^${normalizedChannel}:`, "i"), "");
+        if (!normalizedTarget) continue;
+        const key = pairingKey(normalizedChannel, normalizedTarget);
+        const code = pairingRequests.get(key);
+        const destination = pairingEligibility.get(key);
+        // Only alter the exact native pairing message. Never append a cached
+        // code to later agent replies or messages to another sender.
+        if (!destination || !code || !asText(content).includes(code)) continue;
+        const resolvedDestination = await destination;
+        if (!resolvedDestination) continue;
+        return {
+          key,
+          content: `${content}\n\nCompleta tu pairing en WebChat:\nCódigo: ${code}\nURL: ${resolvedDestination.webchatUrl}\nSoporte: ${supportEmail}`,
+        };
+      }
+
+      // WhatsApp delivery contexts do not always expose a sender/conversation
+      // field. The exact native code is unique and authoritative for routing
+      // the already-issued pairing message.
+      for (const [key, code] of pairingRequests.entries()) {
+        if (!key.startsWith(`${normalizedChannel}:`)) continue;
+        if (!asText(content).includes(code)) continue;
+        const destination = pairingEligibility.get(key);
+        if (!destination) continue;
+        const resolvedDestination = await destination;
+        if (!resolvedDestination) continue;
+        return {
+          key,
+          content: `${content}\n\nCompleta tu pairing en WebChat:\nCódigo: ${code}\nURL: ${resolvedDestination.webchatUrl}\nSoporte: ${supportEmail}`,
+        };
+      }
+      return null;
+    }
+
+    function consumePairing(key) {
+      pairingRequests.delete(key);
+      pairingEligibility.delete(key);
+    }
+
+    // Modern payload hook used by the outbound dispatcher.
+    api.on("reply_payload_sending", async (event, context) => {
+      const channel = normalizeChannel(event.channel ?? context.channelId);
+      if (!channel || context.isGroup === true) return;
+      const content = asText(event.payload?.text ?? event.payload?.content);
+      if (!content) return;
+      const targets = [context.to, context.conversationId, context.senderId, context.sender_id];
+      const enriched = await enrichPairingPayload(channel, targets, content);
+      if (!enriched) return;
+      consumePairing(enriched.key);
+      return {payload: {...event.payload, text: enriched.content, content: enriched.content}};
+    }, {priority: 100});
+
+    // Legacy dispatcher hook retained for channel/plugin compatibility.
     api.on("message_sending", async (event, context) => {
       const channel = normalizeChannel(context.channelId);
       if (!channel || context.isGroup === true) return;
-      const target = asText(event.to).replace(new RegExp(`^${channel}:`, "i"), "");
-      const key = pairingKey(channel, target);
-      const destination = await (pairingEligibility.get(key) ?? Promise.resolve(null));
-      const code = pairingRequests.get(key);
-      // Only enrich the native pairing message itself. If the native adapter
-      // did not expose that message through this hook, do not attach its
-      // cached code to a later agent reply (for example, a stale greeting).
-      if (!destination || !code || !asText(event.content).includes(code)) return;
-      pairingRequests.delete(key);
-      pairingEligibility.delete(key);
-      return {content: `${event.content}\n\nCompleta tu pairing en WebChat:\nCódigo: ${code}\nURL: ${destination.webchatUrl}\nSoporte: ${supportEmail}`};
+      const targets = [event.to, event.conversationId, event.senderId, event.sender_id];
+      const enriched = await enrichPairingPayload(channel, targets, event.content);
+      if (!enriched) return;
+      consumePairing(enriched.key);
+      return {content: enriched.content};
     }, {priority: 100});
   }
 };

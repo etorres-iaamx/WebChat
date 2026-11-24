@@ -72,6 +72,73 @@ final class OpenClawBindingManager
         }
     }
 
+    public function unbindPeer(string $channel, string $externalIdentity): void
+    {
+        $this->assertBindingConfiguration($channel, $externalIdentity);
+        $accountId = (string) $this->config->get('OPENCLAW_CHANNEL_ACCOUNT_ID', 'default');
+        $this->mutateBindings(function (array $bindings) use ($channel, $externalIdentity, $accountId): array {
+            return array_values(array_filter($bindings, static function (array $binding) use ($channel, $externalIdentity, $accountId): bool {
+                $match = is_array($binding['match'] ?? null) ? $binding['match'] : [];
+                $peer = is_array($match['peer'] ?? null) ? $match['peer'] : [];
+                $samePeer = ($match['channel'] ?? '') === $channel
+                    && ($match['accountId'] ?? 'default') === $accountId
+                    && ($peer['kind'] ?? '') === 'direct'
+                    && ($peer['id'] ?? '') === $externalIdentity;
+                return !$samePeer;
+            }));
+        });
+    }
+
+    public function unbindAgentPeers(string $agentId): void
+    {
+        if (!preg_match('/^[A-Za-z0-9_-]+$/', $agentId)) {
+            throw new RuntimeException('Identificador de agente inválido.');
+        }
+        $this->mutateBindings(static fn (array $bindings): array => array_values(array_filter(
+            $bindings,
+            static fn (array $binding): bool => ($binding['agentId'] ?? '') !== $agentId
+                || ($binding['match']['peer']['kind'] ?? '') !== 'direct',
+        )));
+    }
+
+    public function removeBroadMainBindings(): void
+    {
+        $this->mutateBindings(static fn (array $bindings): array => array_values(array_filter(
+            $bindings,
+            static fn (array $binding): bool => ($binding['agentId'] ?? '') !== 'main'
+                || ($binding['match']['peer']['kind'] ?? '') === 'direct',
+        )));
+    }
+
+    private function assertBindingConfiguration(string $channel, string $externalIdentity): void
+    {
+        if (!$this->config->bool('OPENCLAW_BINDING_ENABLED', false)) {
+            throw new RuntimeException('El binding de canales está deshabilitado.');
+        }
+        if (!in_array($channel, ['telegram', 'whatsapp'], true)) {
+            throw new RuntimeException('Canal no soportado para binding.');
+        }
+        if (!preg_match('/^[A-Za-z0-9_+:.@-]+$/', $externalIdentity)) {
+            throw new RuntimeException('Identidad de canal inválida.');
+        }
+    }
+
+    /** @param callable(list<array<string,mixed>>):list<array<string,mixed>> $mutator */
+    private function mutateBindings(callable $mutator): void
+    {
+        $lockPath = (string) $this->config->get('OPENCLAW_BINDING_LOCK', sys_get_temp_dir() . '/webchat-openclaw-bindings.lock');
+        $lock = fopen($lockPath, 'c+');
+        if ($lock === false || !flock($lock, LOCK_EX)) {
+            throw new RuntimeException('No fue posible obtener el lock de bindings.');
+        }
+        try {
+            $this->patchBindings($mutator($this->readBindings()));
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
     /** @return list<array<string,mixed>> */
     private function readBindings(): array
     {

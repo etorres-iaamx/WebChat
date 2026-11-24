@@ -25,20 +25,6 @@
     if (!response.ok || !body.ok) throw new Error(body.error || 'No fue posible completar la operación.');
     return body.data || {};
   }
-  async function provisionRuntimeWithRetry(payload) {
-    const delays = [0, 1000, 3000];
-    for (let attempt = 0; attempt < delays.length; attempt += 1) {
-      if (delays[attempt] > 0) await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
-      setStatus('Preparando tu espacio…');
-      try {
-        await submit(forms.verify, 'runtime/provision', payload);
-        return true;
-      } catch (_) {
-        // The backend records the technical failure; the user only sees the final generic state.
-      }
-    }
-    return false;
-  }
   forms.login?.addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -69,12 +55,11 @@
     setStatus('Verificando tu correo…');
     try {
       const verification = await submit(forms.verify, 'verify', verificationPayload);
-      if (verification.provisioning_pending && !(await provisionRuntimeWithRetry(verificationPayload))) {
-        setFormBusy(forms.verify, false);
-        setStatus('No fue posible completar la operación. Intenta nuevamente más tarde.', true);
-        return;
-      }
-      setStatus('Correo verificado. Ya puedes iniciar sesión y completar el pairing con el código de Telegram o WhatsApp.');
+      setStatus(
+        verification.provisioning_pending
+          ? 'Correo verificado y registro completado. Tu espacio se está preparando y estará disponible automáticamente.'
+          : 'Correo verificado. Ya puedes iniciar sesión y completar el pairing con el código de Telegram o WhatsApp.'
+      );
       forms.verify.hidden = true;
       forms.login.hidden = false;
     } catch (error) {

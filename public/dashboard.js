@@ -215,6 +215,8 @@
             setFormStatus(status, 'Pairing completado. Tu canal ya está vinculado a tu agente.');
             pairingForm.querySelector('input')?.setAttribute('disabled', 'disabled');
             button?.remove();
+            const label = document.querySelector(`[data-pairing-status-label][data-channel="${CSS.escape(pairingForm.dataset.channel)}"]`);
+            if (label) label.textContent = 'Vinculado';
         } catch (error) {
             setFormStatus(status, error.message, true);
         } finally {
@@ -621,9 +623,25 @@
         setActiveSidebarItem(sidebarProfile);
     }
 
+    const systemThemeMedia = window.matchMedia?.('(prefers-color-scheme: dark)');
+
     function applyTheme(theme) {
-        document.body.dataset.theme = theme === 'dark' || theme === 'light' ? theme : 'system';
+        const preference = ['light', 'dark'].includes(theme) ? theme : 'system';
+        const effectiveTheme = preference === 'system'
+            ? (systemThemeMedia?.matches ? 'dark' : 'light')
+            : preference;
+        document.documentElement.dataset.theme = effectiveTheme;
+        document.documentElement.dataset.themePreference = preference;
+        document.body.dataset.theme = effectiveTheme;
+        document.body.dataset.themePreference = preference;
+        document.documentElement.style.colorScheme = effectiveTheme;
+        document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', effectiveTheme);
     }
+
+    systemThemeMedia?.addEventListener?.('change', () => {
+        const preference = document.documentElement.dataset.themePreference || 'system';
+        if (preference === 'system') applyTheme('system');
+    });
 
     function storedSettings() {
         try {

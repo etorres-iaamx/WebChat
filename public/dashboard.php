@@ -67,6 +67,7 @@ $avatarUrl = !empty($authUser['has_avatar'])
     : '';
 $telegramBotUrl = trim((string) $config->get('TELEGRAM_BOT_URL', ''));
 $whatsappBotUrl = trim((string) $config->get('WHATSAPP_BOT_URL', ''));
+$pairingStates = webchat_channels()->statesForUser($authUserId);
 $pairingChannels = array_values(array_unique(array_merge(
     ['telegram', 'whatsapp'],
 )));
@@ -82,9 +83,24 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="color-scheme" content="light">
+    <meta name="color-scheme" content="light dark">
     <title>IAAMXORG · Panel de control</title>
-    <link rel="stylesheet" href="<?= webchat_h(webchat_url('dashboard.css?v=20261116-18')) ?>">
+    <script>
+        (function () {
+            var theme = 'system';
+            try {
+                var settings = JSON.parse(localStorage.getItem('iaamx-settings') || '{}');
+                theme = ['light', 'dark', 'system'].includes(settings.theme) ? settings.theme : 'system';
+            } catch (_) {}
+            var effective = theme === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : theme;
+            document.documentElement.dataset.theme = effective;
+            document.documentElement.dataset.themePreference = theme;
+            document.documentElement.style.colorScheme = effective;
+        }());
+    </script>
+    <link rel="stylesheet" href="<?= webchat_h(webchat_url('dashboard.css?v=20261123-8')) ?>">
 </head>
 <body>
     <div class="viewport-size-warning" data-viewport-warning hidden role="alertdialog" aria-modal="true" aria-labelledby="viewport-warning-title">
@@ -168,27 +184,28 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
                                 </form>
                             </details>
                             <?php if ($telegramBotUrl !== ''): ?>
-                                <a class="profile-option" href="<?= webchat_h($telegramBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>Abre el bot para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
+                                <a class="profile-option" href="<?= webchat_h($telegramBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon profile-option__icon--channel" aria-hidden="true"><img src="<?= webchat_h(webchat_url('assets/telegram.svg')) ?>" alt=""></span><span><strong>Canal de Telegram</strong><small>Abre el bot para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
                             <?php else: ?>
                                 <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">✈</span><span><strong>Canal de Telegram</strong><small>El bot aún no está configurado.</small></span><span class="profile-option__status">Pendiente</span></button>
                             <?php endif; ?>
+                            <?php if ($whatsappBotUrl !== ''): ?>
+                                <a class="profile-option" href="<?= webchat_h($whatsappBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon profile-option__icon--channel" aria-hidden="true"><img src="<?= webchat_h(webchat_url('assets/whatsapp.svg')) ?>" alt=""></span><span><strong>Canal de WhatsApp</strong><small>Abre WhatsApp para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
+                            <?php else: ?>
+                                <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Se habilitará cuando exista el enlace público del bot.</small></span><span class="profile-option__status">Pendiente</span></button>
+                            <?php endif; ?>
                             <div data-pairing-container>
                             <?php foreach ($pairingChannels as $pairingChannel): ?>
-                                <details class="profile-option" open>
-                                    <summary><span class="profile-option__icon" aria-hidden="true">⌁</span><span><strong>Completar pairing de <?= webchat_h(ucfirst($pairingChannel)) ?></strong><small>Introduce el código que te entrega el bot.</small></span><span class="profile-option__status">Disponible</span></summary>
+                                <?php $pairingState = $pairingStates[$pairingChannel] ?? null; ?>
+                                <details class="profile-option">
+                                    <summary><span class="profile-option__icon" aria-hidden="true">⌁</span><span><strong><?= $pairingState === 'paired' ? 'Canal vinculado de ' : 'Completar pairing de ' ?><?= webchat_h(ucfirst($pairingChannel)) ?></strong><small><?= $pairingState === 'paired' ? 'Tu canal ya está vinculado a tu agente.' : 'Introduce el código que te entrega el bot.' ?></small></span><span class="profile-option__status" data-pairing-status-label data-channel="<?= webchat_h($pairingChannel) ?>"><?= $pairingState === 'paired' ? 'Vinculado' : 'Disponible' ?></span></summary>
                                     <form class="profile-form pairing-form" data-pairing-form data-channel="<?= webchat_h($pairingChannel) ?>">
-                                        <label>Código de pairing<input name="code" inputmode="text" minlength="6" maxlength="12" autocomplete="one-time-code" required></label>
-                                        <button class="profile-action" type="submit">Aprobar pairing</button>
+                                        <label>Código de pairing<input name="code" inputmode="text" minlength="6" maxlength="12" autocomplete="one-time-code" required <?= $pairingState === 'paired' ? 'disabled' : '' ?>></label>
+                                        <?php if ($pairingState !== 'paired'): ?><button class="profile-action" type="submit">Aprobar pairing</button><?php endif; ?>
                                         <p class="profile-form__status" data-pairing-status role="status" aria-live="polite"></p>
                                     </form>
                                 </details>
                             <?php endforeach; ?>
                             </div>
-                            <?php if ($whatsappBotUrl !== ''): ?>
-                                <a class="profile-option" href="<?= webchat_h($whatsappBotUrl) ?>" target="_blank" rel="noopener noreferrer"><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Abre WhatsApp para vincularlo con tu agente.</small></span><span class="profile-option__status">Abrir</span></a>
-                            <?php else: ?>
-                                <button class="profile-option" type="button" disabled><span class="profile-option__icon" aria-hidden="true">◌</span><span><strong>Canal de WhatsApp</strong><small>Se habilitará cuando exista el enlace público del bot.</small></span><span class="profile-option__status">Pendiente</span></button>
-                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="profile-panel__empty" aria-hidden="true"></div>
@@ -299,6 +316,6 @@ $historyJson = json_encode($history, $jsonFlags | JSON_THROW_ON_ERROR);
         window.IAAMX_WEBCHAT = <?= $clientConfig ?>;
         window.IAAMX_HISTORY = <?= $historyJson ?>;
     </script>
-    <script src="<?= webchat_h(webchat_url('dashboard.js?v=20261119-3')) ?>" defer></script>
+    <script src="<?= webchat_h(webchat_url('dashboard.js?v=20261123-8')) ?>" defer></script>
 </body>
 </html>

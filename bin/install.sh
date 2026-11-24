@@ -69,6 +69,23 @@ valid_name "$DB_DATABASE" || die 'DB_DATABASE contiene caracteres inválidos'
 valid_name "$DB_USERNAME" || die 'DB_USERNAME contiene caracteres inválidos'
 valid_path "${OPENCLAW_AGENT_WORKSPACE_ROOT:-}" || die 'OPENCLAW_AGENT_WORKSPACE_ROOT debe ser una ruta absoluta'
 
+if [[ -t 0 && -z "${WEBCHAT_ADMIN_TELEGRAM_ID:-}" && -z "${WEBCHAT_ADMIN_WHATSAPP_ID:-}" ]]; then
+  read -r -p "Telegram ID del administrador (vacío si no aplica): " WEBCHAT_ADMIN_TELEGRAM_ID
+  read -r -p "WhatsApp del administrador en formato internacional +521... (vacío si no aplica): " WEBCHAT_ADMIN_WHATSAPP_ID
+fi
+
+WEBCHAT_ADMIN_TELEGRAM_ID="${WEBCHAT_ADMIN_TELEGRAM_ID:-}"
+WEBCHAT_ADMIN_WHATSAPP_ID="${WEBCHAT_ADMIN_WHATSAPP_ID:-}"
+if [[ -n "$WEBCHAT_ADMIN_TELEGRAM_ID" && ! "$WEBCHAT_ADMIN_TELEGRAM_ID" =~ ^[0-9]+$ ]]; then
+  die 'WEBCHAT_ADMIN_TELEGRAM_ID debe contener solo el ID numérico de Telegram'
+fi
+if [[ -n "$WEBCHAT_ADMIN_WHATSAPP_ID" && ! "$WEBCHAT_ADMIN_WHATSAPP_ID" =~ ^\+[0-9]{10,15}$ ]]; then
+  die 'WEBCHAT_ADMIN_WHATSAPP_ID debe usar formato internacional, por ejemplo +528461091262'
+fi
+if [[ -z "$WEBCHAT_ADMIN_TELEGRAM_ID" && -z "$WEBCHAT_ADMIN_WHATSAPP_ID" ]]; then
+  die 'Instalación bloqueada: define WEBCHAT_ADMIN_TELEGRAM_ID o WEBCHAT_ADMIN_WHATSAPP_ID'
+fi
+
 if ((CHECK_ONLY)); then
   printf 'CHECK OK: dependencias y configuración básica válidas.\n'
   exit 0
@@ -125,19 +142,63 @@ SQL
 drop_grant_active=0
 
 if (( !SKIP_OPENCLAW )); then
+  WEBCHAT_PUBLIC_BASE_URL="$WEBCHAT_PUBLIC_BASE_URL" WEBCHAT_SUPPORT_EMAIL="${WEBCHAT_SUPPORT_EMAIL:-xochitl.bot.iaamx@gmail.com}" "$ROOT/bin/patch-whatsapp-pairing.sh"
   openclaw plugins install "$ROOT/openclaw-plugin/webchat-identity" >/dev/null
   openclaw plugins validate "$ROOT/openclaw-plugin/webchat-identity" >/dev/null
-  python3 - "$WEBCHAT_PUBLIC_BASE_URL" "${WEBCHAT_SUPPORT_EMAIL:-xochitl.bot.iaamx@gmail.com}" "${WEBCHAT_CHANNEL_RESOLVE_SECRET:-}" <<'PY' | openclaw config patch --stdin --replace-path plugins.entries.webchat-identity.config
+  python3 - "$WEBCHAT_PUBLIC_BASE_URL" "${WEBCHAT_SUPPORT_EMAIL:-xochitl.bot.iaamx@gmail.com}" "${WEBCHAT_CHANNEL_RESOLVE_SECRET:-}" "$WEBCHAT_ADMIN_TELEGRAM_ID" "$WEBCHAT_ADMIN_WHATSAPP_ID" <<'PY' | openclaw config patch --stdin --replace-path plugins.entries.webchat-identity.config
 import json, sys
-base, support, secret = sys.argv[1:]
+base, support, secret, telegram_admin, whatsapp_admin = sys.argv[1:]
+admin_identities = []
+if telegram_admin:
+    admin_identities.append("telegram:" + telegram_admin)
+if whatsapp_admin:
+    admin_identities.append("whatsapp:" + whatsapp_admin)
 config = {
     "resolveUrl": "http://127.0.0.1:8082/channel.php",
     "publicBaseUrl": base.rstrip("/") + "/",
     "supportEmail": support,
+    "adminIdentities": admin_identities,
 }
 if secret:
     config["resolveSecret"] = secret
 print(json.dumps(config))
+PY
+
+  python3 - "${OPENCLAW_CHANNEL_ACCOUNT_ID:-default}" "$WEBCHAT_ADMIN_TELEGRAM_ID" "$WEBCHAT_ADMIN_WHATSAPP_ID" <<'PY' | openclaw config patch --stdin --replace-path bindings
+import json, subprocess, sys
+
+account_id, telegram_admin, whatsapp_admin = sys.argv[1:]
+result = subprocess.run(["openclaw", "config", "get", "bindings", "--json"], check=False, capture_output=True, text=True)
+bindings = json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else []
+bindings = [item for item in bindings if isinstance(item, dict)]
+
+def direct(channel, identity):
+    return {
+        "agentId": "main",
+        "match": {
+            "channel": channel,
+            "accountId": account_id,
+            "peer": {"kind": "direct", "id": identity},
+        },
+    }
+
+direct_bindings = []
+if telegram_admin:
+    direct_bindings.append(direct("telegram", telegram_admin))
+if whatsapp_admin:
+    direct_bindings.append(direct("whatsapp", whatsapp_admin))
+
+ids_to_replace = {("telegram", telegram_admin), ("whatsapp", whatsapp_admin)}
+bindings = [item for item in bindings if not (
+    item.get("match", {}).get("peer", {}).get("kind") == "direct"
+    and (item.get("match", {}).get("channel"), item.get("match", {}).get("peer", {}).get("id")) in ids_to_replace
+)]
+bindings = [item for item in bindings if not (
+    item.get("agentId") == "main"
+    and "peer" not in item.get("match", {})
+)]
+bindings = direct_bindings + [item for item in bindings if item.get("match", {}).get("peer", {}).get("kind") == "direct"] + [item for item in bindings if item.get("match", {}).get("peer", {}).get("kind") != "direct"]
+print(json.dumps(bindings))
 PY
 fi
 

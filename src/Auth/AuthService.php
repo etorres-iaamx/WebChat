@@ -13,6 +13,7 @@ use Webchat\App\Database;
 use Webchat\App\Token;
 use Webchat\App\Uuid;
 use Webchat\Runtime\OpenClawProvisioner;
+use Webchat\Channels\ChannelIdentityService;
 use Webchat\Runtime\HermesProvisioner;
 
 final class AuthService
@@ -120,7 +121,12 @@ final class AuthService
             $provisioningPending = true;
             $this->recordProvisioningFailure((int) $user['id'], $exception);
         }
-        return ['user' => $this->publicUser($result['user']), 'agent_created' => $result['agent_created'], 'provisioning_pending' => $provisioningPending];
+        return [
+            'user' => $this->publicUser($result['user']),
+            'email_verified' => true,
+            'agent_created' => $result['agent_created'],
+            'provisioning_pending' => $provisioningPending,
+        ];
     }
 
     public function provisionRuntimesForUser(int $userId): void
@@ -330,6 +336,28 @@ final class AuthService
     public function logout(string $token): void
     {
         $this->database->pdo()->prepare('DELETE FROM auth_sessions WHERE token_hash = :token_hash')->execute(['token_hash' => Token::hash($token)]);
+    }
+
+    public function deleteAccount(int $userId): void
+    {
+        $user = $this->findUserById($userId);
+        if ($user === null) {
+            throw new RuntimeException('La cuenta no existe.');
+        }
+
+        $statement = $this->database->pdo()->prepare('SELECT rb.external_agent_id FROM logical_agents la LEFT JOIN runtime_bindings rb ON rb.logical_agent_id = la.id AND rb.runtime = \'openclaw\' WHERE la.user_id = :user_id LIMIT 1');
+        $statement->execute(['user_id' => $userId]);
+        $agentId = $statement->fetchColumn();
+
+        if (is_string($agentId) && $agentId !== '') {
+            (new \Webchat\Runtime\OpenClawBindingManager($this->config))->unbindAgentPeers($agentId);
+        }
+        (new ChannelIdentityService($this->database, $this->config))->unpairUser($userId);
+
+        if (is_string($agentId) && $agentId !== '') {
+            (new OpenClawProvisioner($this->config))->delete($agentId);
+        }
+        $this->database->pdo()->prepare('DELETE FROM users WHERE id = :id')->execute(['id' => $userId]);
     }
 
     /** @return array<string,mixed> */

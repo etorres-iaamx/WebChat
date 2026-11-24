@@ -194,6 +194,13 @@ y ngrok, y activa los servicios. `DB_ADMIN_SOCKET_AUTH=1` permite usar autentica
 por socket sin guardar una contraseña DBA. La contraseña de la aplicación sí permanece en
 `.env`, que no debe versionarse.
 
+Toda instalación requiere definir al menos una identidad administrativa para el canal del
+bot: `WEBCHAT_ADMIN_TELEGRAM_ID` y/o `WEBCHAT_ADMIN_WHATSAPP_ID`. Cuando el instalador se
+ejecuta desde una terminal y ambos valores están vacíos, pregunta por ambas identidades.
+Telegram usa su ID numérico; WhatsApp usa el número internacional con `+`. El instalador crea
+los bindings directos de esas identidades hacia `main`, los añade como administradores al
+plugin y garantiza el fallback principal solo para los canales que tengan administrador.
+
 Para validar sin modificar la máquina:
 
 ```bash

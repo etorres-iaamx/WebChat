@@ -40,6 +40,21 @@ def run_json(command: list[str], *, stdin: str | None = None) -> object:
         raise AdapterError("invalid_json") from exc
 
 
+def provision_openclaw_live(args: argparse.Namespace, agent_id: str, workspace: str) -> str:
+    entries = run_json([args.openclaw_binary, "config", "get", "agents.entries", "--json"])
+    if not isinstance(entries, dict):
+        raise AdapterError("invalid_agents_entries")
+    entries[agent_id] = {
+        "name": agent_id,
+        "workspace": workspace,
+        "agentDir": f"{args.workspace_root.rstrip('/')}/.agents/{agent_id}",
+        "identity": {"name": agent_id},
+    }
+    payload = json.dumps({"agents": {"entries": entries}}, ensure_ascii=False)
+    run([args.openclaw_binary, "config", "patch", "--stdin"], stdin=payload)
+    return agent_id
+
+
 def openclaw_command() -> str:
     return os.environ.get("OPENCLAW_BINARY", "openclaw")
 
@@ -48,10 +63,13 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
     agent_id = "webchat-" + args.agent_public_id.replace("-", "").lower()
     root = args.workspace_root.rstrip("/")
     workspace = f"{root}/{agent_id}"
-    payload = run_json([args.openclaw_binary, "agents", "add", agent_id, "--workspace", workspace,
-                        "--agent-dir", f"{root}/.agents/{agent_id}",
-                        "--non-interactive", "--json"])
-    external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
+    try:
+        external = provision_openclaw_live(args, agent_id, workspace)
+    except AdapterError:
+        payload = run_json([args.openclaw_binary, "agents", "add", agent_id, "--workspace", workspace,
+                            "--agent-dir", f"{root}/.agents/{agent_id}",
+                            "--non-interactive", "--json"])
+        external = payload.get("id", agent_id) if isinstance(payload, dict) else agent_id
     atomic_write(Path(workspace) / "AGENTS.md", (
         "# WebChat agent isolation\n\n"
         "This workspace belongs only to the authenticated WebChat user identified in USER.md.\n"
@@ -69,6 +87,30 @@ def provision_openclaw(args: argparse.Namespace) -> dict[str, str]:
         f"- Identificador WebChat: {profile_value(args.agent_public_id)}\n"
     ))
     return {"external_agent_id": str(external), "workspace": workspace}
+
+
+def delete_openclaw(args: argparse.Namespace) -> dict[str, str]:
+    agent_id = args.agent_id
+    if not re.fullmatch(r"webchat-[a-z0-9_-]{1,160}", agent_id):
+        raise AdapterError("invalid_openclaw_agent_id")
+
+    entries = run_json([args.openclaw_binary, "config", "get", "agents.entries", "--json"])
+    if isinstance(entries, dict):
+        entries.pop(agent_id, None)
+        run([args.openclaw_binary, "config", "patch", "--stdin"], stdin=json.dumps({"agents": {"entries": entries}}, ensure_ascii=False))
+
+    bindings = run_json([args.openclaw_binary, "config", "get", "bindings", "--json"])
+    if isinstance(bindings, list):
+        kept = [binding for binding in bindings if not isinstance(binding, dict) or binding.get("agentId") != agent_id]
+        run([args.openclaw_binary, "config", "patch", "--stdin"], stdin=json.dumps({"bindings": kept}, ensure_ascii=False))
+
+    workspace = Path(args.workspace_root.rstrip("/")) / agent_id
+    agent_dir = Path(args.workspace_root.rstrip("/")) / ".agents" / agent_id
+    for path in (workspace, agent_dir):
+        if path.exists():
+            import shutil
+            shutil.rmtree(path)
+    return {"external_agent_id": agent_id, "deleted": "true"}
 
 
 def atomic_write(path: Path, content: str) -> None:
@@ -109,6 +151,10 @@ def main() -> int:
     create.add_argument("--email", required=True)
     create.add_argument("--phone", default="")
     create.add_argument("--country-code", default="")
+    delete = sub.add_parser("delete-openclaw")
+    delete.add_argument("--agent-id", required=True)
+    delete.add_argument("--openclaw-binary", default=openclaw_command())
+    delete.add_argument("--workspace-root", required=True)
     hermes = sub.add_parser("provision-hermes")
     hermes.add_argument("--profile", required=True)
     hermes.add_argument("--description", required=True)
@@ -118,6 +164,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.operation == "provision-openclaw": result = provision_openclaw(args)
+        elif args.operation == "delete-openclaw": result = delete_openclaw(args)
         else: result = provision_hermes(args)
         print(json.dumps({"ok": True, "result": result}, ensure_ascii=False))
         return 0

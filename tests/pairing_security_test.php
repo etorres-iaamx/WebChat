@@ -10,8 +10,10 @@ $manager = file_get_contents(__DIR__ . '/../src/Runtime/OpenClawBindingManager.p
 $pairing = file_get_contents(__DIR__ . '/../src/Runtime/OpenClawPairingManager.php');
 $auth = file_get_contents(__DIR__ . '/../public/auth.php');
 $authJs = file_get_contents(__DIR__ . '/../public/auth.js');
+$installer = file_get_contents(__DIR__ . '/../bin/install.sh');
+$envExample = file_get_contents(__DIR__ . '/../.env.example');
 
-foreach ([$service, $resolver, $plugin, $schema, $manager, $pairing, $auth, $authJs] as $source) {
+foreach ([$service, $resolver, $plugin, $schema, $manager, $pairing, $auth, $authJs, $installer, $envExample] as $source) {
     if ($source === false) {
         throw new RuntimeException('No se pudo leer una fuente de pairing.');
     }
@@ -37,9 +39,19 @@ $assertions = [
     'plugin no restringe el hook a un trigger frágil' => !str_contains($plugin, 'eligibleTriggers: ["user"]'),
     'plugin excluye al administrador' => str_contains($plugin, 'telegram:1557679246'),
     'plugin permite configurar administradores' => str_contains($schema, 'adminIdentities'),
+    'instalador exige identidad administrativa' => str_contains($installer, 'Instalación bloqueada: define WEBCHAT_ADMIN_TELEGRAM_ID o WEBCHAT_ADMIN_WHATSAPP_ID'),
+    'instalador pregunta por Telegram y WhatsApp' => str_contains($installer, 'Telegram ID del administrador') && str_contains($installer, 'WhatsApp del administrador'),
+    'instalador crea binding administrativo' => str_contains($installer, '"agentId": "main"') && str_contains($installer, 'admin_identities'),
+    'instalador elimina fallback amplio a main' => str_contains($installer, 'item.get("agentId") == "main"') && !str_contains($installer, 'bindings.append(fallback)'),
+    'binding permite quitar peers' => str_contains($manager, 'unbindPeer') && str_contains($manager, 'unbindAgentPeers'),
+    'binding elimina fallbacks amplios' => str_contains($manager, 'removeBroadMainBindings'),
+    'ejemplo expone identidades administrativas' => str_contains($envExample, 'WEBCHAT_ADMIN_TELEGRAM_ID=') && str_contains($envExample, 'WEBCHAT_ADMIN_WHATSAPP_ID='),
     'plugin adjunta URL y soporte al pairing' => str_contains($plugin, 'channel_pairing_requested') && str_contains($plugin, 'Completa tu pairing en WebChat'),
     'plugin no omite pairing por route_to_agent' => !str_contains($plugin, 'result?.action === "route_to_agent"') && str_contains($plugin, 'fallbackWebchatUrl'),
-    'plugin no adjunta código a respuestas normales' => str_contains($plugin, 'asText(event.content).includes(code)'),
+    'plugin no adjunta código a respuestas normales' => str_contains($plugin, 'asText(content).includes(code)'),
+    'plugin usa payload moderno de respuesta' => str_contains($plugin, 'reply_payload_sending'),
+    'plugin reconoce el destino por conversationId' => str_contains($plugin, 'context.conversationId'),
+    'plugin admite delivery sin identidad explicita' => str_contains($plugin, 'The exact native code is unique'),
     'plugin no mezcla códigos entre remitentes' => str_contains($plugin, 'pairingEligibility.get(key)') && str_contains($plugin, 'pairingRequests.get(key)'),
     'pairing reserva la identidad devuelta por OpenClaw' => str_contains($service, 'identityFromRequest') && str_contains($service, '$this->reserve($userId, $channel, $externalIdentity)'),
     'link sincroniza peer binding' => str_contains($service, 'bindPeer'),
@@ -52,6 +64,8 @@ $assertions = [
     'servicio no usa polling de pairing para visibilidad' => !str_contains($service, 'pendingForUser') && !str_contains($service, 'hasActivePairingState'),
     'dashboard no consulta estado para mostrar el formulario' => !str_contains($authJs, 'channel/pending') && !str_contains(file_get_contents(__DIR__ . '/../public/dashboard.php'), 'pendingForUser'),
     'dashboard muestra pairing de Telegram y WhatsApp' => str_contains(file_get_contents(__DIR__ . '/../public/dashboard.php'), "['telegram', 'whatsapp']"),
+    'dashboard muestra estado Vinculado tras pairing' => str_contains(file_get_contents(__DIR__ . '/../public/dashboard.php'), "'Vinculado'") && str_contains(file_get_contents(__DIR__ . '/../public/dashboard.js'), "label.textContent = 'Vinculado'"),
+    'servicio consulta estados de pairing del usuario' => str_contains($service, 'statesForUser'),
     'servicio aprueba pairing y vincula después' => str_contains($service, 'approvePairing') && str_contains($service, 'bindPeer'),
     'pairing valida códigos alfanuméricos' => str_contains($pairing, "^[A-Za-z0-9]{6,12}$"),
     'pairing lista solicitudes antes de aprobar' => str_contains($pairing, "'pairing', 'list'") && str_contains($pairing, "'pairing', 'approve'"),

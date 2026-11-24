@@ -68,5 +68,5 @@ if ($auth !== null) {
     <p class="status" data-status role="status"></p>
   </section>
 </main>
-<script src="<?= webchat_h(webchat_url('auth.js?v=20261118-1')) ?>" defer></script>
+<script src="<?= webchat_h(webchat_url('auth.js?v=20261123-1')) ?>" defer></script>
 </body></html>

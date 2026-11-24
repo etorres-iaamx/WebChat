@@ -35,6 +35,8 @@ final class Config
             'OPENCLAW_CHANNEL_ACCOUNT_ID' => 'default',
             'TELEGRAM_BOT_URL' => 'https://t.me/xochitl_iaamx_etorres_bot',
             'WHATSAPP_BOT_URL' => '',
+            'WEBCHAT_ADMIN_TELEGRAM_ID' => '',
+            'WEBCHAT_ADMIN_WHATSAPP_ID' => '',
             'HERMES_PROVISIONING_ENABLED' => '0',
             'HERMES_HOME' => '',
             'HERMES_PROFILE_PREFIX' => 'webchat-',

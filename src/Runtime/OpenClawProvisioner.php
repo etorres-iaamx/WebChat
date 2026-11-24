@@ -24,4 +24,13 @@ final class OpenClawProvisioner
             '--phone', $phone, '--country-code', $countryCode,
         );
     }
+
+    public function delete(string $agentId): array
+    {
+        return (new EmbeddedAgentAdmin($this->config))->run(
+            'delete-openclaw', '--agent-id', $agentId,
+            '--openclaw-binary', $this->config->required('OPENCLAW_BINARY'),
+            '--workspace-root', $this->config->required('OPENCLAW_AGENT_WORKSPACE_ROOT'),
+        );
+    }
 }
